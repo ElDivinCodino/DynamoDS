@@ -18,9 +18,9 @@ public class Client {
         }
 
         if(args[2] == "read" && args.length == 4) {
-            coordinator.get(args[3]);
+            coordinator.get(Integer.parseInt(args[3]));
         } else if (args[2] == "write" && args.length == 5) {
-            coordinator.update(args[3], args[4]);
+            coordinator.update(Integer.parseInt(args[3]), args[4]);
         } else if (args[2] == "leave" && args.length == 3) {
             coordinator.leave();
         } else {
