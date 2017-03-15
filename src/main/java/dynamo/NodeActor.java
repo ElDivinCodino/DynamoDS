@@ -1,5 +1,6 @@
 package dynamo;
 
+import akka.actor.ActorRef;
 import dynamo.messages.*;
 import dynamo.nodeutilities.Peer;
 import dynamo.nodeutilities.Ring;
@@ -36,28 +37,46 @@ public class NodeActor extends UntypedActor{
 
     private boolean waitingReadQuorum = false;
     private Integer readQuorum = 0;
+    private ActorRef clientReferenceReadRequest = null;
     private ArrayList<ReadOperationMessage> readResponseMessages = new ArrayList<ReadOperationMessage>();
 
-    private void handleReadRequest(Integer itemKey) {
+    /**
+     * Sends a read request for a certain item to all of the N next nodes
+     * @param itemKey the item's key to retrieve
+     */
+    private void handleClientReadRequest(Integer itemKey) {
         ArrayList<Peer> replicas = ring.getReplicasFromKey(N, itemKey);
 
-        // send a retrieve message to each one of the replicas (check if one of these if SELF)
-
-
-        // ->> wait for the response???
-        // no we do not want to do this blocking because we may receive other dynamo.messages in the mean while.
+        ReadOperationMessage readRequest = new ReadOperationMessage(false, true, itemKey);
+        // send a retrieve message to each one of the replicas (check if one of these is SELF)
+        for (Peer p : ring.getReplicasFromKey(this.N, itemKey)){
+            if (p.getKey().equals("self")){
+                // TODO: handle message to self
+                // message to self should work like this
+                getSelf().tell(readRequest, getSelf());
+            } else {
+                // TODO: check if we can send message to self with remote path, if true we can remove this if statement
+                getContext().actorSelection(p.getRemotePath()).tell(readRequest, getSelf());
+            }
+        }
     }
 
     private void handleReadResponseToClient() {
         int v = 0;
-        String value = null;
+        ReadOperationMessage max = readResponseMessages.get(0);
         for (ReadOperationMessage msg : readResponseMessages){
-            if (msg.getVersion() > v){
-                value = msg.getValue();
+            if (msg.getVersion() > max.getVersion()){
+                max = msg;
             }
         }
-
-        // TODO: Here send to the client the response.
+        // Send response to client
+        ReadOperationMessage response = new ReadOperationMessage(
+                false,
+                false,
+                max.getKey(),
+                max.getValue(),
+                max.getVersion());
+        clientReferenceReadRequest.tell(response, getSelf());
     }
 
     /**
@@ -198,11 +217,15 @@ public class NodeActor extends UntypedActor{
                      So we have to contact the nodes responsible for the specified item
                      to retrieve the data.
                     */
-                    handleReadRequest(readMessage.getKey());
+                    // save a reference to the client to be used to respond later
+                    this.clientReferenceReadRequest = getSender();
+                    this.handleClientReadRequest(readMessage.getKey());
                 } else{ // isNode
                     if (readMessage.isRequest()){
                         // A node is requiring a data item
-                        // TODO
+                        // TODO: ask Storage class for the data item with specific key
+                        // TODO: handle missing key case
+                        // TODO: send data back to sender
                     } else{
                         /*
                          waitingReadQuorum is true in case this Node sent a
@@ -211,8 +234,8 @@ public class NodeActor extends UntypedActor{
                          the client
                         */
                         if (waitingReadQuorum){
-                            readQuorum++;
-                            readResponseMessages.add((ReadOperationMessage) message);
+                            this.readQuorum++;
+                            this.readResponseMessages.add((ReadOperationMessage) message);
                             /*
                              if we have reached the read quorum, send response
                              to client and reset variables. Here clearly we assume that
@@ -220,12 +243,14 @@ public class NodeActor extends UntypedActor{
                             */
                             if (readQuorum.equals(R)){
                                 this.handleReadResponseToClient();
-                                readQuorum = 0;
-                                readResponseMessages.clear();
-                                waitingReadQuorum = false;
+                                this.readQuorum = 0;
+                                this.readResponseMessages.clear();
+                                this.waitingReadQuorum = false;
+                                this.clientReferenceReadRequest = null;
                             }
                         }else {
-                            // do nothing for now.
+                            // do nothing for now. Wait for other responses.
+                            // TODO: Schedule a timeout to self at beginning in case we do not receive enough responses?
                         }
                     }
                 }

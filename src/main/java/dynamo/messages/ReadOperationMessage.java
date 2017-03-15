@@ -26,6 +26,8 @@ public class ReadOperationMessage {
         this.version = version;
     }
 
+
+
     public boolean isClient() {
         return client;
     }
