@@ -1,3 +1,5 @@
+package nodeutilities;
+
 /**
  * Class which represents  basic item we want to store and manage
  */
@@ -56,7 +58,7 @@ public class Item {
     }
 
     /**
-     *  overrides the java.lang.Object.toString() method, useful to manage the representation of the Item
+     *  overrides the java.lang.Object.toString() method, useful to manage the representation of the NodeUtilities.Item
      */
     public String toString() {
         StringBuilder sb = new StringBuilder();

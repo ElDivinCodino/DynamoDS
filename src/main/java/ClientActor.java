@@ -22,8 +22,8 @@ public class ClientActor extends UntypedActor{
 
     /**
      * send an update request to the coordinator
-     * @param key key of the Item to be updated
-     * @param value the new value of the Item
+     * @param key key of the NodeUtilities.Item to be updated
+     * @param value the new value of the NodeUtilities.Item
      */
     public void update(int key, String value) {
         sendRequest(new Update(key, value));
@@ -31,7 +31,7 @@ public class ClientActor extends UntypedActor{
 
     /**
      * send a get request to the coordinator
-     * @param key key of the needed Item
+     * @param key key of the needed NodeUtilities.Item
      */
     public void get(int key) {
         sendRequest(new Get(key));

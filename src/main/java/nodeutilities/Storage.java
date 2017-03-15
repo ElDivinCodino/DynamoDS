@@ -1,3 +1,5 @@
+package nodeutilities;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
@@ -8,20 +10,20 @@ import java.util.*;
 public class Storage {
 
     private List<Item> db;
-    private Node owner;
+    private NodeActor owner;
     private String pathname = "/storage/storage.txt";
 
-    public Storage(Node owner) {
+    public Storage(NodeActor owner) {
         this.owner = owner;
         db = new ArrayList<Item>();
     }
 
     /**
-     * updates an Item in the Storage
+     * updates an NodeUtilities.Item in the NodeUtilities.Storage
      *
-     * @param key the key of the Item
-     * @param value the updated value of the Item
-     * @param version the version number of the Item
+     * @param key the key of the NodeUtilities.Item
+     * @param value the updated value of the NodeUtilities.Item
+     * @param version the version number of the NodeUtilities.Item
      */
     public void update(int key, String value, int version) {
         Item item;
@@ -40,9 +42,9 @@ public class Storage {
     }
 
     /**
-     * deletes an Item from the Storage
+     * deletes an NodeUtilities.Item from the NodeUtilities.Storage
      *
-     * @param key the key of the Item
+     * @param key the key of the NodeUtilities.Item
      */
     public void delete(int key) {
         Item item;
@@ -72,10 +74,10 @@ public class Storage {
     }
 
     /**
-     * gets a specific Item
+     * gets a specific NodeUtilities.Item
      *
-     * @param key the key of the Item
-     * @return the Item
+     * @param key the key of the NodeUtilities.Item
+     * @return the NodeUtilities.Item
      */
     public Item getItem(int key) {
         Item item;
@@ -100,7 +102,7 @@ public class Storage {
     }
 
     /**
-     *  overrides the java.lang.Object.toString() method, useful to manage the representation of the entire Storage
+     *  overrides the java.lang.Object.toString() method, useful to manage the representation of the entire NodeUtilities.Storage
      */
     public String toString() {
         StringBuilder sb = new StringBuilder();
