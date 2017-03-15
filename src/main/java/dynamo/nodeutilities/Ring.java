@@ -21,8 +21,16 @@ public class Ring {
     }
 
     public boolean removePeer(Peer peer){
-        if (!peers.containsKey(peer.getKey())) {
+        if (peers.containsKey(peer.getKey())) {
             peers.remove(peer.getKey());
+            return true;
+        }
+        return false;
+    }
+
+    public boolean removePeer(Integer key){
+        if (!peers.containsKey(key)){
+            peers.remove(key);
             return true;
         }
         return false;
@@ -86,6 +94,30 @@ public class Ring {
             next = this.next(next);
         }
         return replicas;
+    }
+
+    /**
+     * Checks if this Node is among the next N nodes in clockwise
+     * order starting from a certain key value
+     * @param startingKey the starting key
+     * @param N the number of replicas to check for
+     * @param selfKey the key of this node
+     * @return true if the node is among the next N clockwise nodes
+     * from startingKey, false otherwise
+     */
+    public boolean selfIsNextNClockwise(Integer startingKey, Integer N, Integer selfKey){
+        // TODO: Here there is a problem in case we have smaller number of nodes than N.
+        boolean amNext = false;
+        Integer replicaCounter = 1;
+        Integer currentPeer = this.next(startingKey);
+        while (!amNext && replicaCounter < N){
+            if (currentPeer.equals(selfKey)){
+                amNext = true;
+            }
+            currentPeer = this.next(currentPeer);
+            replicaCounter++;
+        }
+        return amNext;
     }
 
     public TreeMap<Integer, Peer> getPeers() {

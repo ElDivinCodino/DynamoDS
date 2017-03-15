@@ -36,7 +36,7 @@ public class NodeActor extends UntypedActor{
 
     private boolean waitingReadQuorum = false;
     private Integer readQuorum = 0;
-    private ArrayList<ReadResponseMessage> readResponseMessages = new ArrayList<ReadResponseMessage>();
+    private ArrayList<ReadOperationMessage> readResponseMessages = new ArrayList<ReadOperationMessage>();
 
     private void handleReadRequest(Integer itemKey) {
         ArrayList<Peer> replicas = ring.getReplicasFromKey(N, itemKey);
@@ -51,7 +51,7 @@ public class NodeActor extends UntypedActor{
     private void handleReadResponseToClient() {
         int v = 0;
         String value = null;
-        for (ReadResponseMessage msg : readResponseMessages){
+        for (ReadOperationMessage msg : readResponseMessages){
             if (msg.getVersion() > v){
                 value = msg.getValue();
             }
@@ -136,47 +136,76 @@ public class NodeActor extends UntypedActor{
                         ((HelloMatesMessage) message).getRemotePath(),
                         ((HelloMatesMessage) message).getKey());
                 ring.addPeer(peer);
-                // TODO: delete from storage unnecessary items, first check with ring class from which key we have to delete
+                // TODO: delete from storage unnecessary items, we have to delete all item with key SMALLER than the remoteKey (smaller or equal?)
                 // TODO: Useful API in Storage to delete all items smaller that a certain key
+                break;
+            case "ByeMatesMessage":
+                /*
+                    So one node in the network told us it is leaving.
+                    The leaving node sent this message to all other Nodes so we have
+                    to check if we are among the next N clockwise ones, in such
+                    case we have to take care of the data it has passed, otherwise we just
+                    remove it from our topology
+                 */
+                Integer senderKey = ((ByeMatesMessage) message).getKey();
+                boolean removed = ring.removePeer(senderKey);
+                assert removed;
+
+                if (ring.selfIsNextNClockwise(senderKey, this.N, this.idKey)){
+                    // TODO: assume control of the relevant data (to be implemented in Storage class)
+                }
                 break;
             case "PeerListMessage":
                 PeersListMessage reply = new PeersListMessage(false, ring.getPeers());
                 getSender().tell(reply, getSelf());
                 break;
             case "RequestInitItemsMessage":
-                // TODO: here we have to decide which Items to send back to the sender.
+                // TODO: here we have to decide which Items to send back to the sender. So all the items with key that is smaller (or equal?) to the new node's key. Also be careful about the case in which an item has key greater than the greater node key in the system
 //                RequestInitItemsMessage reply = new RequestInitItemsMessage()
 //                getSender().tell(reply, getSelf());
                 break;
-            case "ReadRequestMessage": // client > node (request a read)
-                handleReadRequest(((ReadRequestMessage) message).getKey());
-                break;
-            case "RequestItemMessage": // node > node (request an item)
-                break;
-            case "ResponseItemMessage": // node > node (node returns an item)
-                /*
-                 waitingReadQuorum is true in case this Node sent a
-                 RequestItemMessage to other nodes. So it is waiting
-                 to have at least R replies before sending the response back to
-                 the client
-                */
-                if (waitingReadQuorum){
-                    readQuorum++;
-                    readResponseMessages.add((ReadResponseMessage) message);
+            case "ReadOperationMessage":
+                ReadOperationMessage readMessage = (ReadOperationMessage) message;
+                if (readMessage.isClient()){
+                    // if the message is coming from the client it must be a request
+                    assert readMessage.isRequest();
                     /*
-                     if we have reached the read quorum, send response
-                     to client and reset variables. Here clearly we assume that
-                     a Node can handle just one read request from a client at a time.
+                     So we have received a read operation from the client.
+                     So we have to contact the nodes responsible for the specified item
+                     to retrieve the data.
                     */
-                    if (readQuorum.equals(R)){
-                        this.handleReadResponseToClient();
-                        readQuorum = 0;
-                        readResponseMessages.clear();
-                        waitingReadQuorum = false;
+                    handleReadRequest(readMessage.getKey());
+                } else{ // isNode
+                    if (readMessage.isRequest()){
+                        // A node is requiring a data item
+                        // TODO
+                    } else{
+                        /*
+                         waitingReadQuorum is true in case this Node sent a
+                         RequestItemMessage to other nodes. So it is waiting
+                         to have at least R replies before sending the response back to
+                         the client
+                        */
+                        if (waitingReadQuorum){
+                            readQuorum++;
+                            readResponseMessages.add((ReadOperationMessage) message);
+                            /*
+                             if we have reached the read quorum, send response
+                             to client and reset variables. Here clearly we assume that
+                             a Node can handle just one read request from a client at a time.
+                            */
+                            if (readQuorum.equals(R)){
+                                this.handleReadResponseToClient();
+                                readQuorum = 0;
+                                readResponseMessages.clear();
+                                waitingReadQuorum = false;
+                            }
+                        }else {
+                            // do nothing for now.
+                        }
                     }
-                }else {
-                    // do nothing for now.
                 }
+                break;
             case "WriteRequestMessage":
                 break;
             default:
