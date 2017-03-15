@@ -2,10 +2,10 @@ package dynamo.messages;
 
 import java.io.Serializable;
 
-public class Get implements Serializable {
+public class GetMessage implements Serializable {
     public int key;
 
-    public Get(int key) {
+    public GetMessage(int key) {
         this.key = key;
     }
 }

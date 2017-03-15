@@ -1,10 +1,10 @@
 package dynamo;
 
 import akka.actor.UntypedActor;
-import dynamo.messages.Get;
-import dynamo.messages.Leave;
-import dynamo.messages.Timeout;
-import dynamo.messages.Update;
+import dynamo.messages.GetMessage;
+import dynamo.messages.LeaveMessage;
+import dynamo.messages.TimeoutMessage;
+import dynamo.messages.UpdateMessage;
 import scala.concurrent.duration.Duration;
 
 /**
@@ -31,7 +31,7 @@ public class ClientActor extends UntypedActor{
      * @param value the new value of the NodeUtilities.Item
      */
     public void update(int key, String value) {
-        sendRequest(new Update(key, value));
+        sendRequest(new UpdateMessage(key, value));
     }
 
     /**
@@ -39,18 +39,18 @@ public class ClientActor extends UntypedActor{
      * @param key key of the needed NodeUtilities.Item
      */
     public void get(int key) {
-        sendRequest(new Get(key));
+        sendRequest(new GetMessage(key));
     }
 
     /**
      * send a leave request to the coordinator
      */
     public void leave() {
-        sendRequest(new Leave());
+        sendRequest(new LeaveMessage());
     }
 
     public void onReceive(Object message) {
-        if(message instanceof Timeout) {
+        if(message instanceof TimeoutMessage) {
             if (!hasDecided) {
                 //TODO what we do if a decision is not taken yet?
             }
@@ -70,12 +70,12 @@ public class ClientActor extends UntypedActor{
 
 
     /**
-     * schedule a Timeout message in specified time
+     * schedule a TimeoutMessage message in specified time
      * @param time the time (in milliseconds) before the timeout happens
      */
     private void setTimeout(int time) {
         getContext().system().scheduler().scheduleOnce(
-                Duration.create(time, java.util.concurrent.TimeUnit.MILLISECONDS), getSelf(), new Timeout(), getContext().system().dispatcher(), getSelf()
+                Duration.create(time, java.util.concurrent.TimeUnit.MILLISECONDS), getSelf(), new TimeoutMessage(), getContext().system().dispatcher(), getSelf()
         );
     }
 }
