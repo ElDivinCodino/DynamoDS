@@ -1,11 +1,13 @@
-import nodeutilities.Peer;
-import nodeutilities.Ring;
-import nodeutilities.Storage;
+package dynamo;
+
+import dynamo.messages.*;
+import dynamo.nodeutilities.Peer;
+import dynamo.nodeutilities.Ring;
+import dynamo.nodeutilities.Storage;
 import akka.actor.ActorSelection;
 import akka.actor.UntypedActor;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
-import messages.*;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
@@ -21,7 +23,7 @@ public class NodeActor extends UntypedActor{
     Integer R = 0;
     Integer W = 0;
 
-    // The identifier of the NodeActor.
+    // The identifier of the dynamo.NodeActor.
     Integer id_key = 0;
 
     // Where all the peers are stored.
@@ -41,7 +43,7 @@ public class NodeActor extends UntypedActor{
 
 
         // ->> wait for the response???
-        // no we do not want to do this blocking because we may receive other messages in the mean while.
+        // no we do not want to do this blocking because we may receive other dynamo.messages in the mean while.
     }
 
     private void handleReadRespondeToClient(){

@@ -1,4 +1,4 @@
-package nodeutilities;
+package dynamo.nodeutilities;
 
 /**
  * Class which represents  basic item we want to store and manage

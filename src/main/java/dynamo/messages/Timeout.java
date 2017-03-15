@@ -1,4 +1,4 @@
-package messages;
+package dynamo.messages;
 
 import java.io.Serializable;
 

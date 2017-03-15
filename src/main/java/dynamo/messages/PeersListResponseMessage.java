@@ -1,4 +1,6 @@
-package messages;
+package dynamo.messages;
+
+import dynamo.nodeutilities.Peer;
 
 import java.util.TreeMap;
 

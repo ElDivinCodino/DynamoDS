@@ -1,4 +1,4 @@
-package nodeutilities;
+package dynamo.nodeutilities;
 
 import java.util.*;
 

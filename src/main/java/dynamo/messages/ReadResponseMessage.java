@@ -1,4 +1,4 @@
-package messages;
+package dynamo.messages;
 
 /**
  * Created by StefanoFiora on 14/03/2017.

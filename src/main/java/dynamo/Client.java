@@ -1,3 +1,5 @@
+package dynamo;
+
 /**
  * This class represents the interface for the client
  */

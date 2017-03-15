@@ -1,7 +1,9 @@
+package dynamo;
+
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
-import messages.StartJoinMessage;
+import dynamo.messages.StartJoinMessage;
 
 /**
  * Created by StefanoFioravanzo on 15/03/2017.
@@ -26,8 +28,8 @@ public class Node {
 
         String error_msg = "Exactly two parameters are needed!\n" +
                 "There are two options available:" +
-                "\t-java Node join remote_ip remote_port" +
-                "\t-java Node recover remote_ip remote_port";
+                "\t-java dynamo.Node join remote_ip remote_port" +
+                "\t-java dynamo.Node recover remote_ip remote_port";
 
         if (args.length != 2){
             throw new IllegalArgumentException(error_msg);
@@ -42,7 +44,7 @@ public class Node {
             // TODO: Have to generate here a unique id key for the node?
 
             // Can extend here the crete call with arguments to the
-            // constructor of the Node class
+            // constructor of the dynamo.Node class
             localNode = system.actorOf(Props.create(Node.class));
             localNode.tell(new StartJoinMessage(), null);
         }

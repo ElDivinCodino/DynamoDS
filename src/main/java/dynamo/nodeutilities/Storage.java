@@ -1,4 +1,4 @@
-package nodeutilities;
+package dynamo.nodeutilities;
 
 import java.io.FileWriter;
 import java.io.IOException;

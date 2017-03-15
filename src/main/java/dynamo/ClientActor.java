@@ -1,5 +1,10 @@
+package dynamo;
+
 import akka.actor.UntypedActor;
-import messages.*;
+import dynamo.messages.Get;
+import dynamo.messages.Leave;
+import dynamo.messages.Timeout;
+import dynamo.messages.Update;
 import scala.concurrent.duration.Duration;
 
 /**
@@ -12,7 +17,7 @@ public class ClientActor extends UntypedActor{
     private boolean hasDecided = false;
 
     /**
-     * initialize the ClientActor with the address and the port of the coordinator
+     * initialize the dynamo.ClientActor with the address and the port of the coordinator
      * @param address the address of the coordinator
      * @param port the port of the coordinator
      */
