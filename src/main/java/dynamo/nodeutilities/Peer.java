@@ -8,8 +8,11 @@ import akka.actor.ActorRef;
  */
 public class Peer {
 
+    // the akka remote path that identifies an actor.
     private String remotePath = null;
+    // actor reference
     private ActorRef me = null;
+    // unique (global) actor identifier
     private Integer key = null;
 
     public Peer(String remotePath, Integer key){

@@ -15,3 +15,11 @@ Node to Node:
 
 - HelloMatesMessage: A node has received the list of Nodes present in the system and the data it is responsible for, so it announces itself to the community
 - ByeMatesMessage: tell nodes that the sender wants to leave the system. Have to replicate the data it was storing accordingly.
+
+- ReadOpeationMessage: This message is used for 4 different use cases
+    - the client requests a read to a node (with specific item's key)
+    - a node requests a read to another node (with specific item's key)
+    - a node responds to node to read request
+    - a node responds to client to read request
+    
+ 

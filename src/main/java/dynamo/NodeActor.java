@@ -60,6 +60,17 @@ public class NodeActor extends UntypedActor{
         // TODO: Here send to the client the response.
     }
 
+    /**
+     * Request to a remote actor it list of peers to have knowledge of the network
+     * This method is blocking, i.e. it waits for the response from the remote actor
+     * and upon receiving it, it instantiated a new Ring object and copied the received
+     * list of Peers (adding also itself to the list)
+     * It is ok to make this method blocking because the network still does not have
+     * knowledge about this actor, so it is not possible to receive messages while we
+     * are waiting.
+     * @param remotePath The path of the remote actor
+     * @throws Exception
+     */
     private void requestPeersToRemote(String remotePath) throws Exception {
         final Timeout timeout = new Timeout(Duration.create(5, "seconds"));
         ActorSelection remoteActor = getContext().actorSelection(remotePath);
@@ -84,6 +95,15 @@ public class NodeActor extends UntypedActor{
         ring.addPeer(new Peer(this.remotePath, this.idKey));
     }
 
+    /**
+     * Request to the next node in the network the data items
+     * that need to pass to our competence. This method is blocking, which means
+     * that the actor waits for the reply from the remote actor. This is possible
+     * because no other node in the network knows of the existence of this node yet.
+     * So it is not possible to receive other messages while we are waiting for
+     * this reply.
+     * @throws Exception
+     */
     private void requestItemsToNextNode() throws Exception {
         //first get the next node
         String remotePathNext = ring.getNextPeer(this.idKey).getRemotePath();
@@ -103,6 +123,10 @@ public class NodeActor extends UntypedActor{
         this.storage = new Storage(msg.getItems());
     }
 
+    /**
+     * Send a message to everyone in the network (except to self)
+     * to announce the new node.
+     */
     private void announceSelfToSystem() {
         // here send a hello message to everyone.
         HelloMatesMessage message = new HelloMatesMessage(this.idKey, this.remotePath);
