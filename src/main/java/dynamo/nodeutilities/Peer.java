@@ -8,9 +8,9 @@ import akka.actor.ActorRef;
  */
 public class Peer {
 
-    String remotePath = null;
-    ActorRef me = null;
-    Integer key = null;
+    private String remotePath = null;
+    private ActorRef me = null;
+    private Integer key = null;
 
     public Peer(String remotePath, Integer key){
         this.remotePath = remotePath;

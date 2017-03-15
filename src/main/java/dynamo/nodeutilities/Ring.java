@@ -28,7 +28,7 @@ public class Ring {
         return false;
     }
 
-    private Integer getNextEqualKey(Integer key){
+    public Integer nextEqual(Integer key){
         // gets the least equal or greater key
         Integer lowest = peers.ceilingKey(key);
         // in case there is not a key, returns null
@@ -40,7 +40,7 @@ public class Ring {
         return lowest;
     }
 
-    private Integer next(Integer key){
+    public Integer next(Integer key){
         Integer next = peers.higherKey(key);
         if (next == null){
             next = peers.firstKey();
@@ -48,12 +48,20 @@ public class Ring {
         return next;
     }
 
-    private Integer previous(Integer key){
-        Integer previous = peers.lowerKey(key)
+    public Integer previous(Integer key){
+        Integer previous = peers.lowerKey(key);
         if (previous == null){
             previous = peers.lastKey();
         }
         return previous;
+    }
+
+    public Peer getPeer(Integer key){
+        return peers.get(key);
+    }
+
+    public Peer getNextPeer(Integer key){
+        return this.getPeer(this.next(key));
     }
 
     /**
@@ -65,10 +73,10 @@ public class Ring {
      * @param itemKey the item's key to retrieve
      * @return an array of Peers
      */
-    public ArrayList<Peer> getNextNodesFromKey(Integer N, Integer itemKey){
+    public ArrayList<Peer> getReplicasFromKey(Integer N, Integer itemKey){
         // The nodes responsible for this item will be the N ones
         // with key >= itemKey
-        Integer next = this.getNextEqualKey(itemKey);
+        Integer next = this.nextEqual(itemKey);
         ArrayList<Peer> replicas = new ArrayList<Peer>();
         // TODO: What if we have LESS nodes in the ring than N??
         // let's assume that in the ring there are ALL the Nodes,

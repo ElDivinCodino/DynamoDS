@@ -1,5 +1,7 @@
 package dynamo.nodeutilities;
 
+import dynamo.NodeActor;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
@@ -10,12 +12,17 @@ import java.util.*;
 public class Storage {
 
     private List<Item> db;
-    private NodeActor owner;
+    private NodeActor owner; // Do we really need this?
+    // TODO: Pass to the constructor the path to be defined in the akka config (e.g. $HOME)
     private String pathname = "/storage/storage.txt";
 
     public Storage(NodeActor owner) {
         this.owner = owner;
         db = new ArrayList<Item>();
+    }
+
+    public Storage(List<Item> db) {
+        this.db = db;
     }
 
     /**
