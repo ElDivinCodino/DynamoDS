@@ -95,7 +95,7 @@ public class NodeActor extends UntypedActor{
      * @param itemKey the item's key to retrieve
      */
     private void handleClientReadRequest(Integer itemKey) {
-        OperationMessage readRequest = new OperationMessage(false, true, true, itemKey);
+        OperationMessage readRequest = new OperationMessage(false, true, true, itemKey, null);
         // send a retrieve message to each one of the replicas (check if one of these is SELF)
         sendMessageToReplicas(readRequest, itemKey);
     }
@@ -367,7 +367,6 @@ public class NodeActor extends UntypedActor{
                             }
                         }else {
                             // do nothing for now. Wait for other responses.
-                            // TODO: Schedule a timeout to self at beginning in case we do not receive enough responses? Yes for sure in the case of write.
                         }
                     }
                 }

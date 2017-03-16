@@ -3,8 +3,9 @@ package dynamo;
 import akka.actor.UntypedActor;
 import dynamo.messages.GetMessage;
 import dynamo.messages.LeaveMessage;
+import dynamo.messages.OperationMessage;
 import dynamo.messages.TimeoutMessage;
-import dynamo.messages.UpdateMessage;
+import dynamo.messages.OperationMessage;
 import scala.concurrent.duration.Duration;
 
 /**
@@ -31,7 +32,7 @@ public class ClientActor extends UntypedActor{
      * @param value the new value of the NodeUtilities.Item
      */
     public void update(int key, String value) {
-        sendRequest(new UpdateMessage(true, true, key, value));
+        sendRequest(new OperationMessage(true, true, false, key, value));
     }
 
     /**

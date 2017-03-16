@@ -14,11 +14,12 @@ public class OperationMessage {
     private String value;
     private Integer version;
 
-    public OperationMessage(boolean client, boolean request, boolean read, Integer key) {
+    public OperationMessage(boolean client, boolean request, boolean read, Integer key, String value) {
         this.client = client;
         this.request = request;
         this.read = read;
         this.key = key;
+        this.value = value;
     }
 
     public OperationMessage(boolean client, boolean request, boolean read, Integer key, String value, Integer version) {
