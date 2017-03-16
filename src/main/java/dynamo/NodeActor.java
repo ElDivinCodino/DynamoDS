@@ -24,6 +24,7 @@ public class NodeActor extends UntypedActor{
     private Integer N = 0;
     private Integer R = 0;
     private Integer W = 0;
+    private Integer Q = 0;
 
     // The identifier of the dynamo.NodeActor.
     private Integer idKey = 0;
@@ -35,10 +36,33 @@ public class NodeActor extends UntypedActor{
     // Where all the data items are stored.
     private Storage storage = null;
 
-    private boolean waitingReadQuorum = false;
-    private Integer readQuorum = 0;
-    private ActorRef clientReferenceReadRequest = null;
-    private ArrayList<ReadOperationMessage> readResponseMessages = new ArrayList<ReadOperationMessage>();
+    /*
+    Handy variable when we are dealing with a read/write request
+    from the client.
+     */
+    // read or write operation
+    private boolean readOperation = false;
+    // true if we are waiting for some nodes to reply (to reach the quorum)
+    private boolean waitingQuorum = false;
+    // partial quorum counter
+    private Integer quorum = 0;
+    // the quorum that has to be reached (it changes based on read or write)
+    private Integer quorumTreshold = 0;
+    // the reference of the client to respond to after the quorum operation
+    private ActorRef clientReferenceRequest = null;
+    // contains the read responses from the issued nodes
+    private ArrayList<ReadMessage> readResponseMessages = new ArrayList<>();
+
+
+
+    public NodeActor(Integer n, Integer r, Integer w) {
+        this.N = n;
+        this.R = r;
+        this.W = w;
+        this.Q = Math.max(this.R, this.W);
+
+        assert W + R > N;
+    }
 
     /**
      * Sends a read request for a certain item to all of the N next nodes
@@ -47,10 +71,10 @@ public class NodeActor extends UntypedActor{
     private void handleClientReadRequest(Integer itemKey) {
         ArrayList<Peer> replicas = ring.getReplicasFromKey(N, itemKey);
 
-        ReadOperationMessage readRequest = new ReadOperationMessage(false, true, itemKey);
+        ReadMessage readRequest = new ReadMessage(false, true, itemKey);
         // send a retrieve message to each one of the replicas (check if one of these is SELF)
         for (Peer p : ring.getReplicasFromKey(this.N, itemKey)){
-            if (p.getKey().equals("self")){
+            if (p.getRemotePath().equals("self")){
                 // TODO: handle message to self
                 // message to self should work like this
                 getSelf().tell(readRequest, getSelf());
@@ -61,23 +85,64 @@ public class NodeActor extends UntypedActor{
         }
     }
 
+    /**
+     * Decides what item to send back to the client between the ones
+     * received by the replicas in the system.
+     * Then sends the item.
+     */
     private void handleReadResponseToClient() {
         int v = 0;
-        ReadOperationMessage max = readResponseMessages.get(0);
-        for (ReadOperationMessage msg : readResponseMessages){
+        ReadMessage max = readResponseMessages.get(0);
+        for (ReadMessage msg : readResponseMessages){
             if (msg.getVersion() > max.getVersion()){
                 max = msg;
             }
         }
         // Send response to client
-        ReadOperationMessage response = new ReadOperationMessage(
+        ReadMessage response = new ReadMessage(
                 false,
                 false,
                 max.getKey(),
                 max.getValue(),
                 max.getVersion());
-        clientReferenceReadRequest.tell(response, getSelf());
+        clientReferenceRequest.tell(response, getSelf());
     }
+
+    private void issueUpdateToReplicas(){
+        int v = 0;
+        ReadMessage max = readResponseMessages.get(0);
+        for (ReadMessage msg : readResponseMessages){
+            if (msg.getVersion() > max.getVersion()){
+                max = msg;
+            }
+        }
+        UpdateMessage response = new UpdateMessage(
+                false,
+                false,
+                null,
+                "success",
+                null);
+        clientReferenceRequest.tell(response, getSelf());
+        // send to client success
+        UpdateMessage issueUpdate = new UpdateMessage(
+                false,
+                false,
+                max.getKey(),
+                max.getValue(),
+                max.getVersion());
+        // send update message to replicas
+        for (Peer p : ring.getReplicasFromKey(this.N, max.getKey())) {
+            if (p.getRemotePath().equals("self")){
+                // TODO: handle message to self
+                // message to self should work like this
+                getSelf().tell(max, getSelf());
+            } else {
+                // TODO: check if we can send message to self with remote path, if true we can remove this if statement
+                getContext().actorSelection(p.getRemotePath()).tell(max, getSelf());
+            }
+        }
+    }
+
 
     /**
      * Request to a remote actor it list of peers to have knowledge of the network
@@ -207,8 +272,8 @@ public class NodeActor extends UntypedActor{
 //                RequestInitItemsMessage reply = new RequestInitItemsMessage()
 //                getSender().tell(reply, getSelf());
                 break;
-            case "ReadOperationMessage":
-                ReadOperationMessage readMessage = (ReadOperationMessage) message;
+            case "ReadMessage":
+                ReadMessage readMessage = (ReadMessage) message;
                 if (readMessage.isClient()){
                     // if the message is coming from the client it must be a request
                     assert readMessage.isRequest();
@@ -218,7 +283,9 @@ public class NodeActor extends UntypedActor{
                      to retrieve the data.
                     */
                     // save a reference to the client to be used to respond later
-                    this.clientReferenceReadRequest = getSender();
+                    this.clientReferenceRequest = getSender();
+                    this.readOperation = true;
+                    this.quorumTreshold = this.R;
                     this.handleClientReadRequest(readMessage.getKey());
                 } else{ // isNode
                     if (readMessage.isRequest()){
@@ -228,34 +295,58 @@ public class NodeActor extends UntypedActor{
                         // TODO: send data back to sender
                     } else{
                         /*
-                         waitingReadQuorum is true in case this Node sent a
-                         RequestItemMessage to other nodes. So it is waiting
+                         waitingQuorum is true in case this Node sent a
+                         ReadMessage to other nodes. So it is waiting
                          to have at least R replies before sending the response back to
                          the client
                         */
-                        if (waitingReadQuorum){
-                            this.readQuorum++;
-                            this.readResponseMessages.add((ReadOperationMessage) message);
+                        if (waitingQuorum){
+                            this.quorum++;
+                            this.readResponseMessages.add((ReadMessage) message);
                             /*
                              if we have reached the read quorum, send response
                              to client and reset variables. Here clearly we assume that
                              a Node can handle just one read request from a client at a time.
                             */
-                            if (readQuorum.equals(R)){
-                                this.handleReadResponseToClient();
-                                this.readQuorum = 0;
+                            if (quorum.equals(this.quorumTreshold)){
+                                if (this.readOperation){
+                                    // respond to the client with the proper item
+                                    this.handleReadResponseToClient();
+                                } else{
+                                    // report success to client and send the correct update to the replicas
+                                    this.issueUpdateToReplicas();
+                                }
+                                this.quorum = 0;
+                                this.quorumTreshold = 0;
+                                this.waitingQuorum = false;
                                 this.readResponseMessages.clear();
-                                this.waitingReadQuorum = false;
-                                this.clientReferenceReadRequest = null;
+                                this.clientReferenceRequest = null;
                             }
                         }else {
                             // do nothing for now. Wait for other responses.
-                            // TODO: Schedule a timeout to self at beginning in case we do not receive enough responses?
+                            // TODO: Schedule a timeout to self at beginning in case we do not receive enough responses? Yes for sure in the case of write.
                         }
                     }
                 }
                 break;
-            case "WriteRequestMessage":
+            case "UpdateMessage":
+                UpdateMessage updateMessage = (UpdateMessage) message;
+                if (updateMessage.isClient()){
+                    // if the message is coming from the client it must be a request
+                    assert updateMessage.isRequest();
+
+                    this.clientReferenceRequest = getSender();
+                    this.readOperation = false;
+                    this.quorumTreshold = this.Q;
+                    this.handleClientReadRequest(updateMessage.getKey());
+                } else{ // isNode
+                    if (updateMessage.isRequest()){
+                        // TODO: a node is telling us to update an element in our storage (update the version)
+                    } else{
+                        assert false;
+                        // This should never happen!
+                    }
+                }
                 break;
             default:
                 unhandled(message);

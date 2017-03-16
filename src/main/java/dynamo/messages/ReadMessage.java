@@ -3,7 +3,7 @@ package dynamo.messages;
 /**
  * Created by StefanoFiora on 15/03/2017.
  */
-public class ReadOperationMessage {
+public class ReadMessage {
 
     private boolean client;
     private boolean request;
@@ -12,13 +12,13 @@ public class ReadOperationMessage {
     private String value;
     private Integer version;
 
-    public ReadOperationMessage(boolean client, boolean request, Integer key) {
+    public ReadMessage(boolean client, boolean request, Integer key) {
         this.client = client;
         this.request = request;
         this.key = key;
     }
 
-    public ReadOperationMessage(boolean client, boolean request, Integer key, String value, Integer version) {
+    public ReadMessage(boolean client, boolean request, Integer key, String value, Integer version) {
         this.client = client;
         this.request = request;
         this.key = key;

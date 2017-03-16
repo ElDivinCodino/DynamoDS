@@ -41,11 +41,12 @@ public class Node {
             remotePort = args[2];
 
             // TODO: add parameters N, W, R to the config file and pass them to the create method
+            Integer n = 0, r = 0, w = 0;
             // TODO: Have to generate here a unique id key for the node?
 
             // Can extend here the crete call with arguments to the
             // constructor of the dynamo.Node class
-            localNode = system.actorOf(Props.create(Node.class));
+            localNode = system.actorOf(Props.create(Node.class, n, r, w));
             localNode.tell(new StartJoinMessage(remoteIp, remotePort), null);
         }
 

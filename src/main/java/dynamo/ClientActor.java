@@ -31,7 +31,7 @@ public class ClientActor extends UntypedActor{
      * @param value the new value of the NodeUtilities.Item
      */
     public void update(int key, String value) {
-        sendRequest(new UpdateMessage(key, value));
+        sendRequest(new UpdateMessage(true, true, key, value));
     }
 
     /**
