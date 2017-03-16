@@ -1,6 +1,7 @@
 package dynamo;
 
 import akka.actor.ActorRef;
+import akka.actor.Cancellable;
 import com.sun.corba.se.spi.orb.Operation;
 import dynamo.messages.*;
 import dynamo.nodeutilities.Item;
@@ -17,6 +18,7 @@ import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
 
@@ -57,6 +59,8 @@ public class NodeActor extends UntypedActor{
     // contains the read responses from the issued nodes
     private ArrayList<OperationMessage> readResponseMessages = new ArrayList<>();
 
+    // A cancellable returned from the scheduler which lets us cancel the scheduled message
+    private Cancellable scheduledTimeoutMessageCancellable;
 
     public NodeActor(Integer n, Integer r, Integer w) {
         this.N = n;
@@ -239,6 +243,17 @@ public class NodeActor extends UntypedActor{
         }
     }
 
+    /**
+     * Schedule a TimeoutMessage to self after
+     * @param time How many time units to wait
+     * @param unit Specific time unit to use
+     */
+    private void scheduleTimeout(Integer time, TimeUnit unit) {
+        this.scheduledTimeoutMessageCancellable = getContext().system().scheduler().scheduleOnce(
+                Duration.create(time, unit),
+                getSelf(), new TimeoutMessage(), getContext().system().dispatcher(), getSelf());
+    }
+
     public void onReceive(Object message) throws Exception {
         switch (message.getClass().getName()) {
             case "StartJoinMessage": // from actor system, request to join network
@@ -288,6 +303,7 @@ public class NodeActor extends UntypedActor{
 //                getSender().tell(reply, getSelf());
                 break;
             case "OperationMessage":
+                // TODO: Check that we do not receive a read/write request while we are handling already another operation
                 OperationMessage opMessage = (OperationMessage) message;
                 if (opMessage.isClient()){
                     // if the message is coming from the client it must be a request
@@ -306,6 +322,7 @@ public class NodeActor extends UntypedActor{
                         this.quorumTreshold = this.Q;
                         this.newValue = opMessage.getValue();
                     }
+                    this.scheduleTimeout(2, TimeUnit.SECONDS);
                     this.handleClientReadRequest(opMessage.getKey());
                 } else{ // isNode
                     if (opMessage.isRequest()){
@@ -353,6 +370,29 @@ public class NodeActor extends UntypedActor{
                             // TODO: Schedule a timeout to self at beginning in case we do not receive enough responses? Yes for sure in the case of write.
                         }
                     }
+                }
+                break;
+            case "TimeoutMessage":
+                // if we are still waiting for some nodes to respond but too much time has passed
+                if (waitingQuorum) {
+                    // delete the upcoming scheduled Timeout
+                    this.scheduledTimeoutMessageCancellable.cancel();
+                    OperationMessage clientResponse = new OperationMessage(
+                            false,
+                            false,
+                            true,
+                            null,
+                            "failure",
+                            null);
+                    clientReferenceRequest.tell(clientResponse, getSelf());
+                    this.quorum = 0;
+                    this.quorumTreshold = 0;
+                    this.waitingQuorum = false;
+                    this.readResponseMessages.clear();
+                    this.clientReferenceRequest = null;
+                }else {
+                    // we have completed all operation in time, do nothing.
+                    System.out.println("LOg that we have received timeout but we don't need it anymore");
                 }
                 break;
             default:
