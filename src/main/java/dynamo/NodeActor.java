@@ -1,7 +1,9 @@
 package dynamo;
 
 import akka.actor.ActorRef;
+import com.sun.corba.se.spi.orb.Operation;
 import dynamo.messages.*;
+import dynamo.nodeutilities.Item;
 import dynamo.nodeutilities.Peer;
 import dynamo.nodeutilities.Ring;
 import dynamo.nodeutilities.Storage;
@@ -48,11 +50,12 @@ public class NodeActor extends UntypedActor{
     private Integer quorum = 0;
     // the quorum that has to be reached (it changes based on read or write)
     private Integer quorumTreshold = 0;
+    // the new value to be updated
+    private String newValue = null;
     // the reference of the client to respond to after the quorum operation
     private ActorRef clientReferenceRequest = null;
     // contains the read responses from the issued nodes
-    private ArrayList<ReadMessage> readResponseMessages = new ArrayList<>();
-
+    private ArrayList<OperationMessage> readResponseMessages = new ArrayList<>();
 
 
     public NodeActor(Integer n, Integer r, Integer w) {
@@ -65,24 +68,48 @@ public class NodeActor extends UntypedActor{
     }
 
     /**
-     * Sends a read request for a certain item to all of the N next nodes
-     * @param itemKey the item's key to retrieve
+     * Send a message to the replicas responsible for
+     * data item with a certain key
+     * @param message the message to be sent (must implement Serializable interface)
+     * @param itemKey the key of the data item
      */
-    private void handleClientReadRequest(Integer itemKey) {
-        ArrayList<Peer> replicas = ring.getReplicasFromKey(N, itemKey);
-
-        ReadMessage readRequest = new ReadMessage(false, true, itemKey);
-        // send a retrieve message to each one of the replicas (check if one of these is SELF)
+    private void sendMessageToReplicas(Object message, Integer itemKey) {
         for (Peer p : ring.getReplicasFromKey(this.N, itemKey)){
             if (p.getRemotePath().equals("self")){
                 // TODO: handle message to self
                 // message to self should work like this
-                getSelf().tell(readRequest, getSelf());
+                getSelf().tell(message, getSelf());
             } else {
                 // TODO: check if we can send message to self with remote path, if true we can remove this if statement
-                getContext().actorSelection(p.getRemotePath()).tell(readRequest, getSelf());
+                getContext().actorSelection(p.getRemotePath()).tell(message, getSelf());
             }
         }
+    }
+
+    /**
+     * Sends a read request for a certain item to all of the N next nodes
+     * @param itemKey the item's key to retrieve
+     */
+    private void handleClientReadRequest(Integer itemKey) {
+        OperationMessage readRequest = new OperationMessage(false, true, true, itemKey);
+        // send a retrieve message to each one of the replicas (check if one of these is SELF)
+        sendMessageToReplicas(readRequest, itemKey);
+    }
+
+    /**
+     * Returns the item with newer version number from
+     * the responses from the replicas
+     * @return an Item object with value, key and version number
+     */
+    private Item getLatestVersionItemFromResponses() {
+        int v = 0;
+        OperationMessage max = readResponseMessages.get(0);
+        for (OperationMessage msg : readResponseMessages){
+            if (msg.getVersion() > max.getVersion()){
+                max = msg;
+            }
+        }
+        return new Item(max.getKey(), max.getValue(), max.getVersion());
     }
 
     /**
@@ -91,56 +118,44 @@ public class NodeActor extends UntypedActor{
      * Then sends the item.
      */
     private void handleReadResponseToClient() {
-        int v = 0;
-        ReadMessage max = readResponseMessages.get(0);
-        for (ReadMessage msg : readResponseMessages){
-            if (msg.getVersion() > max.getVersion()){
-                max = msg;
-            }
-        }
+        Item latest = getLatestVersionItemFromResponses();
         // Send response to client
-        ReadMessage response = new ReadMessage(
+        OperationMessage response = new OperationMessage(
                 false,
                 false,
-                max.getKey(),
-                max.getValue(),
-                max.getVersion());
+                true,
+                latest.getKey(),
+                latest.getValue(),
+                latest.getVersion());
         clientReferenceRequest.tell(response, getSelf());
     }
 
+    /**
+     * Send success message to client and then tell the replicas
+     * to update their data item with the new value and latest version number.
+     */
     private void issueUpdateToReplicas(){
-        int v = 0;
-        ReadMessage max = readResponseMessages.get(0);
-        for (ReadMessage msg : readResponseMessages){
-            if (msg.getVersion() > max.getVersion()){
-                max = msg;
-            }
-        }
-        UpdateMessage response = new UpdateMessage(
+        Item latest = getLatestVersionItemFromResponses();
+        // send success resposnse to client
+        OperationMessage clientResponse = new OperationMessage(
                 false,
                 false,
+                true,
                 null,
                 "success",
                 null);
-        clientReferenceRequest.tell(response, getSelf());
-        // send to client success
-        UpdateMessage issueUpdate = new UpdateMessage(
+        clientReferenceRequest.tell(clientResponse, getSelf());
+        // issue update to replicas
+        Integer newVersion = latest.getVersion() + 1;
+        OperationMessage issueUpdate = new OperationMessage(
                 false,
+                true,
                 false,
-                max.getKey(),
-                max.getValue(),
-                max.getVersion());
+                latest.getKey(),
+                this.newValue,
+                newVersion);
         // send update message to replicas
-        for (Peer p : ring.getReplicasFromKey(this.N, max.getKey())) {
-            if (p.getRemotePath().equals("self")){
-                // TODO: handle message to self
-                // message to self should work like this
-                getSelf().tell(max, getSelf());
-            } else {
-                // TODO: check if we can send message to self with remote path, if true we can remove this if statement
-                getContext().actorSelection(p.getRemotePath()).tell(max, getSelf());
-            }
-        }
+        sendMessageToReplicas(issueUpdate, latest.getKey());
     }
 
 
@@ -272,11 +287,11 @@ public class NodeActor extends UntypedActor{
 //                RequestInitItemsMessage reply = new RequestInitItemsMessage()
 //                getSender().tell(reply, getSelf());
                 break;
-            case "ReadMessage":
-                ReadMessage readMessage = (ReadMessage) message;
-                if (readMessage.isClient()){
+            case "OperationMessage":
+                OperationMessage opMessage = (OperationMessage) message;
+                if (opMessage.isClient()){
                     // if the message is coming from the client it must be a request
-                    assert readMessage.isRequest();
+                    assert opMessage.isRequest();
                     /*
                      So we have received a read operation from the client.
                      So we have to contact the nodes responsible for the specified item
@@ -285,15 +300,26 @@ public class NodeActor extends UntypedActor{
                     // save a reference to the client to be used to respond later
                     this.clientReferenceRequest = getSender();
                     this.readOperation = true;
-                    this.quorumTreshold = this.R;
-                    this.handleClientReadRequest(readMessage.getKey());
-                } else{ // isNode
-                    if (readMessage.isRequest()){
-                        // A node is requiring a data item
-                        // TODO: ask Storage class for the data item with specific key
-                        // TODO: handle missing key case
-                        // TODO: send data back to sender
+                    if (opMessage.isRead()){
+                        this.quorumTreshold = this.R;
                     } else{
+                        this.quorumTreshold = this.Q;
+                        this.newValue = opMessage.getValue();
+                    }
+                    this.handleClientReadRequest(opMessage.getKey());
+                } else{ // isNode
+                    if (opMessage.isRequest()){
+                        if (opMessage.isRead()){
+                            // A node is requiring a data item
+                            // TODO: ask Storage class for the data item with specific key
+                            // TODO: handle missing key case
+                            // TODO: send data back to sender
+                        } else{ // isUpdate
+                            // TODO: a node is telling us to update an element in our storage (update the version)
+                        }
+                    } else{
+                        // we can have responses just from read requests, not from update requests
+                        assert opMessage.isRead();
                         /*
                          waitingQuorum is true in case this Node sent a
                          ReadMessage to other nodes. So it is waiting
@@ -302,7 +328,7 @@ public class NodeActor extends UntypedActor{
                         */
                         if (waitingQuorum){
                             this.quorum++;
-                            this.readResponseMessages.add((ReadMessage) message);
+                            this.readResponseMessages.add((OperationMessage) message);
                             /*
                              if we have reached the read quorum, send response
                              to client and reset variables. Here clearly we assume that
@@ -326,25 +352,6 @@ public class NodeActor extends UntypedActor{
                             // do nothing for now. Wait for other responses.
                             // TODO: Schedule a timeout to self at beginning in case we do not receive enough responses? Yes for sure in the case of write.
                         }
-                    }
-                }
-                break;
-            case "UpdateMessage":
-                UpdateMessage updateMessage = (UpdateMessage) message;
-                if (updateMessage.isClient()){
-                    // if the message is coming from the client it must be a request
-                    assert updateMessage.isRequest();
-
-                    this.clientReferenceRequest = getSender();
-                    this.readOperation = false;
-                    this.quorumTreshold = this.Q;
-                    this.handleClientReadRequest(updateMessage.getKey());
-                } else{ // isNode
-                    if (updateMessage.isRequest()){
-                        // TODO: a node is telling us to update an element in our storage (update the version)
-                    } else{
-                        assert false;
-                        // This should never happen!
                     }
                 }
                 break;
