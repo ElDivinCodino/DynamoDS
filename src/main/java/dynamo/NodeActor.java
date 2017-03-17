@@ -23,8 +23,10 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
-    LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
 
+    String LOG_PREFIX = "[Node Actor] ";
+
+    LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
 
     // For know we hard code these values
     // Think about maybe reading them form the config at
@@ -90,6 +92,8 @@ public class NodeActor extends UntypedActor{
             } else {
                 // TODO: check if we can send message to self with remote path, if true we can remove this if statement
                 getContext().actorSelection(p.getRemotePath()).tell(message, getSelf());
+                nodeActorLogger.debug("{}Sent message {} to Node {} ({})",
+                        LOG_PREFIX, message.toString(), p.getKey(), p.getRemotePath());
             }
         }
     }
@@ -99,6 +103,7 @@ public class NodeActor extends UntypedActor{
      * @param itemKey the item's key to retrieve
      */
     private void handleClientReadRequest(Integer itemKey) {
+        nodeActorLogger.debug("{}handleClientReadRequest: itemKey {}", LOG_PREFIX, itemKey);
         OperationMessage readRequest = new OperationMessage(false, true, true, itemKey, null);
         // send a retrieve message to each one of the replicas (check if one of these is SELF)
         sendMessageToReplicas(readRequest, itemKey);
@@ -110,6 +115,7 @@ public class NodeActor extends UntypedActor{
      * @return an Item object with value, key and version number
      */
     private Item getLatestVersionItemFromResponses() {
+        nodeActorLogger.debug("{}getLatestVersionItemFromResponses", LOG_PREFIX);
         int v = 0;
         OperationMessage max = readResponseMessages.get(0);
         for (OperationMessage msg : readResponseMessages){
@@ -135,6 +141,8 @@ public class NodeActor extends UntypedActor{
                 latest.getKey(),
                 latest.getValue(),
                 latest.getVersion());
+        nodeActorLogger.debug("{}handleReadResponseToClient: message {} sent to client",
+                LOG_PREFIX, response.toString());
         clientReferenceRequest.tell(response, getSelf());
     }
 
@@ -153,6 +161,8 @@ public class NodeActor extends UntypedActor{
                 "success",
                 null);
         clientReferenceRequest.tell(clientResponse, getSelf());
+        nodeActorLogger.debug("{}issueUpdateToReplicas: message {} sent to client",
+                LOG_PREFIX, clientResponse.toString());
         // issue update to replicas
         Integer newVersion = latest.getVersion() + 1;
         OperationMessage issueUpdate = new OperationMessage(
@@ -163,6 +173,8 @@ public class NodeActor extends UntypedActor{
                 this.newValue,
                 newVersion);
         // send update message to replicas
+        nodeActorLogger.debug("{}issueUpdateToReplicas: call sendMessageToReplicas with message {}",
+                LOG_PREFIX, issueUpdate.toString());
         sendMessageToReplicas(issueUpdate, latest.getKey());
     }
 
@@ -184,6 +196,8 @@ public class NodeActor extends UntypedActor{
         final Future<Object> future = Patterns.ask(remoteActor,
                 new PeersListMessage(true), timeout);
 
+        nodeActorLogger.debug("{}requestPeersToRemote: waiting for response from {}", LOG_PREFIX, remotePath);
+
         // wait for an acknowledgement
         final Object message = Await.result(future, timeout.duration());
         assert message instanceof PeersListMessage;
@@ -200,6 +214,8 @@ public class NodeActor extends UntypedActor{
         ring.setPeers(msg.getPeers());
         // add self to the ring
         ring.addPeer(new Peer(this.remotePath, this.idKey));
+        nodeActorLogger.debug("{}requestPeersToRemote: initialized Ring with {} peers",
+                LOG_PREFIX, this.ring.getNumberOfPeers());
     }
 
     /**
@@ -219,6 +235,9 @@ public class NodeActor extends UntypedActor{
         final Future<Object> future = Patterns.ask(remoteActor,
                 new RequestInitItemsMessage(true, this.idKey, this.remotePath), timeout);
 
+        nodeActorLogger.debug("{}requestItemsToNextNode: waiting for next actor (key {}) to respond",
+                LOG_PREFIX, this.ring.getNextPeer(this.idKey));
+
         // wait for an acknowledgement
         final Object message = Await.result(future, timeout.duration());
         assert message instanceof RequestInitItemsMessage;
@@ -228,6 +247,7 @@ public class NodeActor extends UntypedActor{
 
         // now instantiate local storage with received data
         this.storage = new Storage(msg.getItems());
+        nodeActorLogger.debug("{}requestItemsToNextNode: initialized storage with new items", LOG_PREFIX);
     }
 
     /**
@@ -243,6 +263,8 @@ public class NodeActor extends UntypedActor{
             // we do not send a message to ourselves
             if (!this.idKey.equals(key)) {
                 getContext().actorSelection(peer.getRemotePath()).tell(message, getSelf());
+                nodeActorLogger.debug("{}announceSelfToSystem: sent HelloMessage to remote Node with key {}",
+                        LOG_PREFIX, key);
             }
         }
     }
@@ -256,10 +278,12 @@ public class NodeActor extends UntypedActor{
         this.scheduledTimeoutMessageCancellable = getContext().system().scheduler().scheduleOnce(
                 Duration.create(time, unit),
                 getSelf(), new TimeoutMessage(), getContext().system().dispatcher(), getSelf());
+        nodeActorLogger.debug("{}scheduleTimeout: scheduled timeout in {} {}",
+                LOG_PREFIX, time, unit.toString());
     }
 
     public void onReceive(Object message) throws Exception {
-        nodeActorLogger.info("Received Message {}", message.toString());
+        nodeActorLogger.info("{}Received Message {}", LOG_PREFIX, message.toString());
 
         switch (message.getClass().getName()) {
             case "StartJoinMessage": // from actor system, request to join network

@@ -72,6 +72,10 @@ public class Ring {
         return this.getPeer(this.next(key));
     }
 
+    public Integer getNumberOfPeers(){
+        return this.peers.size();
+    }
+
     /**
      * Returns an array of Peers, where the peers are
      * the Nodes responsible for the replica of a specific data item.
