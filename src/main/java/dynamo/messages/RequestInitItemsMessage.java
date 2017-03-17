@@ -2,12 +2,13 @@ package dynamo.messages;
 
 import dynamo.nodeutilities.Item;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
 /**
  * Created by StefanoFiora on 15/03/2017.
  */
-public class RequestInitItemsMessage {
+public class RequestInitItemsMessage implements Serializable {
     private boolean request = false;
     ArrayList<Item> items = null;
     private Integer senderKey = null;
@@ -38,5 +39,15 @@ public class RequestInitItemsMessage {
 
     public String getSenderRemotePath() {
         return senderRemotePath;
+    }
+
+    @Override
+    public String toString() {
+        return "RequestInitItemsMessage{" +
+                "request=" + request +
+                ", items=" + items +
+                ", senderKey=" + senderKey +
+                ", senderRemotePath='" + senderRemotePath + '\'' +
+                '}';
     }
 }

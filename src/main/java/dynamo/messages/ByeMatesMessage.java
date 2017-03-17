@@ -25,4 +25,12 @@ public class ByeMatesMessage implements Serializable {
     public ArrayList<Item> getItems() {
         return items;
     }
+
+    @Override
+    public String toString() {
+        return "ByeMatesMessage{" +
+                "key=" + key +
+                ", items=" + items +
+                '}';
+    }
 }

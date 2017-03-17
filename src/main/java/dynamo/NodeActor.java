@@ -2,6 +2,8 @@ package dynamo;
 
 import akka.actor.ActorRef;
 import akka.actor.Cancellable;
+import akka.event.Logging;
+import akka.event.LoggingAdapter;
 import com.sun.corba.se.spi.orb.Operation;
 import dynamo.messages.*;
 import dynamo.nodeutilities.Item;
@@ -21,6 +23,8 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
+    LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
+
 
     // For know we hard code these values
     // Think about maybe reading them form the config at
@@ -255,6 +259,8 @@ public class NodeActor extends UntypedActor{
     }
 
     public void onReceive(Object message) throws Exception {
+        nodeActorLogger.info("Received Message {}", message.toString());
+
         switch (message.getClass().getName()) {
             case "StartJoinMessage": // from actor system, request to join network
                 String remotePath = "akka.tcp://mysystem@"+
@@ -391,7 +397,9 @@ public class NodeActor extends UntypedActor{
                     this.clientReferenceRequest = null;
                 }else {
                     // we have completed all operation in time, do nothing.
-                    System.out.println("LOg that we have received timeout but we don't need it anymore");
+                    // Cannot happen because we removed the scheduled timeout when the
+                    // read/write operation was completed
+                    assert false;
                 }
                 break;
             default:

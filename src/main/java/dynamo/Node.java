@@ -46,7 +46,7 @@ public class Node {
 
             // Can extend here the crete call with arguments to the
             // constructor of the dynamo.Node class
-            localNode = system.actorOf(Props.create(Node.class, n, r, w));
+            localNode = system.actorOf(Props.create(NodeActor.class, n, r, w), "node");
             localNode.tell(new StartJoinMessage(remoteIp, remotePort), null);
         }
 

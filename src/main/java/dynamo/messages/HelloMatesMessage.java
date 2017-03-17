@@ -1,9 +1,11 @@
 package dynamo.messages;
 
+import java.io.Serializable;
+
 /**
  * Created by StefanoFiora on 15/03/2017.
  */
-public class HelloMatesMessage {
+public class HelloMatesMessage implements Serializable {
 
     private Integer key;
     private String remotePath;
@@ -19,5 +21,13 @@ public class HelloMatesMessage {
 
     public String getRemotePath() {
         return remotePath;
+    }
+
+    @Override
+    public String toString() {
+        return "HelloMatesMessage{" +
+                "key=" + key +
+                ", remotePath='" + remotePath + '\'' +
+                '}';
     }
 }
