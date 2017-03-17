@@ -29,4 +29,12 @@ public class PeersListMessage implements Serializable {
     public TreeMap<Integer, Peer> getPeers() {
         return peers;
     }
+
+    @Override
+    public String toString() {
+        return "PeersListMessage{" +
+                "request=" + request +
+                ", peers=" + peers +
+                '}';
+    }
 }

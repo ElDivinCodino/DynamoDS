@@ -22,4 +22,12 @@ public class StartJoinMessage implements Serializable {
     public String getRemotePort() {
         return remotePort;
     }
+
+    @Override
+    public String toString() {
+        return "StartJoinMessage{" +
+                "remoteIp='" + remoteIp + '\'' +
+                ", remotePort='" + remotePort + '\'' +
+                '}';
+    }
 }

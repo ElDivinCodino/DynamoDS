@@ -8,4 +8,11 @@ public class GetMessage implements Serializable {
     public GetMessage(int key) {
         this.key = key;
     }
+
+    @Override
+    public String toString() {
+        return "GetMessage{" +
+                "key=" + key +
+                '}';
+    }
 }

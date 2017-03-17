@@ -1,9 +1,11 @@
 package dynamo.messages;
 
+import java.io.Serializable;
+
 /**
  * Created by StefanoFiora on 15/03/2017.
  */
-public class OperationMessage {
+public class OperationMessage implements Serializable {
 
     private boolean client;
     private boolean request;
@@ -53,5 +55,17 @@ public class OperationMessage {
 
     public Integer getVersion() {
         return version;
+    }
+
+    @Override
+    public String toString() {
+        return "OperationMessage{" +
+                "client=" + client +
+                ", request=" + request +
+                ", read=" + read +
+                ", key=" + key +
+                ", value='" + value + '\'' +
+                ", version=" + version +
+                '}';
     }
 }
