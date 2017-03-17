@@ -19,3 +19,14 @@ Node to Node:
 - **OperationMessage**: This message is used for all read/write operation between client and nodes. Putting all the logic into a single message results in a better organized code.
     
  
+
+### TODOs
+
+- STE
+    - Logging
+    - RemotePaths (send to self with path)
+
+- FRA
+    - Merge Client and ClientActor (use Future pattern)
+    - Review TODOs in Actor's onReceive and extend Storage class accordingly
+    

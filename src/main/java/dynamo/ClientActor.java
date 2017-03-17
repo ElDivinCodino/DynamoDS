@@ -5,7 +5,6 @@ import dynamo.messages.GetMessage;
 import dynamo.messages.LeaveMessage;
 import dynamo.messages.OperationMessage;
 import dynamo.messages.TimeoutMessage;
-import dynamo.messages.OperationMessage;
 import scala.concurrent.duration.Duration;
 
 /**
