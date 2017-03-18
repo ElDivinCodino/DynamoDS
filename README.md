@@ -37,5 +37,5 @@ Node to Node:
     - I've changed the constructor in RequestInitItemsMessage, allowing it to take an ArrayList also in request. This because this way I can maintain a reference to 
     the Storage of the sender, doing the set difference of the Store of the newer w.r.t. the one of the older.
     This way I could complete the "RequestInitItemsMessage" case. Please check if my idea is faulty or not (if I didn't take into consideration some borderline cases).
-    
+    Modified for this purpose also requestItemsToNextNode() method, see comments in the code.
     

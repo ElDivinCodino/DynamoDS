@@ -243,12 +243,13 @@ public class NodeActor extends UntypedActor{
         final Object message = Await.result(future, timeout.duration());
         assert message instanceof RequestInitItemsMessage;
 
-        RequestInitItemsMessage msg = (RequestInitItemsMessage) message;
-        assert !msg.isRequest();
+        // (FRA) ALL THIS IMPLEMENTED IN onReceive METHOD
+        //RequestInitItemsMessage msg = (RequestInitItemsMessage) message;
+        //assert !msg.isRequest();
 
-        // now instantiate local storage with received data
-        this.storage = new Storage(msg.getItems());
-        nodeActorLogger.debug("{}requestItemsToNextNode: initialized storage with new items", LOG_PREFIX);
+        //// now instantiate local storage with received data
+        //this.storage = new Storage(msg.getItems());
+        //nodeActorLogger.debug("{}requestItemsToNextNode: initialized storage with new items", LOG_PREFIX);
     }
 
     /**
