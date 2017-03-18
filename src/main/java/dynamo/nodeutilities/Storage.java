@@ -1,7 +1,5 @@
 package dynamo.nodeutilities;
 
-import dynamo.NodeActor;
-
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
@@ -11,40 +9,40 @@ import java.util.*;
  */
 public class Storage {
 
-    private List<Item> db;
-    private NodeActor owner; // Do we really need this?
+    private ArrayList<Item> db;
     // TODO: Pass to the constructor the path to be defined in the akka config (e.g. $HOME)
     private String pathname = "/storage/storage.txt";
 
-    public Storage(NodeActor owner) {
-        this.owner = owner;
-        db = new ArrayList<Item>();
-    }
-
-    public Storage(List<Item> db) {
+    public Storage(ArrayList<Item> db) {
         this.db = db;
     }
 
     /**
-     * updates an NodeUtilities.Item in the NodeUtilities.Storage
+     * updates an NodeUtilities.Item in the NodeUtilities.Storage, if already present, or adds it to the Storage if not
      *
      * @param key the key of the NodeUtilities.Item
      * @param value the updated value of the NodeUtilities.Item
      * @param version the version number of the NodeUtilities.Item
      */
     public void update(int key, String value, int version) {
-        Item item;
+        Item item = new Item(key, value, version);
 
-        for(int i = 0; i < db.size(); i++) {
-            item = db.get(i);
+        int i = 0;
 
-            if(item.getKey() == key) {
-                item.setKey(key);
-                item.setValue(value);
-                item.setVersion(version);
-                save();
-                return;
-            }
+        while(item.compareTo(db.get(i)) < 0 && i < db.size()) {
+            i++;
+        }
+
+        //if already existing, update
+        if(item.getKey() == key) {
+            item.setKey(key);
+            item.setValue(value);
+            item.setVersion(version);
+            save();
+            return;
+        } else {
+            //else, add, shifting all the others on the right, if any is present after
+            db.add(i, item);
         }
     }
 
@@ -99,6 +97,41 @@ public class Storage {
         return null;
     }
 
+    /*
+     * @param i the threshold: retrieve Items until i
+     * @param b if true means that the two nodes are one the tail and one the head of the ring
+     * @return the list of the Items that are stored in this node but not in the next one
+     */
+    public ArrayList<Item> retrieveAll(ArrayList<Item> storage) {
+        ArrayList<Item> list = new ArrayList<>();
+        list.addAll(db);
+        list.removeAll(storage);
+        return list;
+    }
+
+    /*
+     * This method deletes, after a new Node joining the system, the Items the Storage is not anymore responsible for
+     * @param list the list of Items the Storage is not anymore responsible for
+     */
+    public void looseResponsabilityOf(ArrayList<Item> receivedList) {
+        db.removeAll(receivedList);
+    }
+
+    /*
+     * This method deletes, after a new Node joining the system, the Items the Storage is not anymore responsible for
+     * @param list the list of Items the Storage is not anymore responsible for
+     */
+    public void acquireResponsabilityOf(ArrayList<Item> receivedList) {
+        db.addAll(receivedList);
+    }
+
+    /*
+    * @return the ArrayList representing the Storage
+    */
+    public ArrayList<Item> getStorage() {
+        return db;
+    }
+
     /**
      * recovers after a crash
      *
@@ -120,4 +153,5 @@ public class Storage {
 
         return sb.toString();
     }
+
 }

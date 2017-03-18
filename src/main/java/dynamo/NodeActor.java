@@ -19,6 +19,7 @@ import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -233,7 +234,7 @@ public class NodeActor extends UntypedActor{
         final Timeout timeout = new Timeout(Duration.create(5, "seconds"));
         ActorSelection remoteActor = getContext().actorSelection(remotePathNext);
         final Future<Object> future = Patterns.ask(remoteActor,
-                new RequestInitItemsMessage(true, this.idKey, this.remotePath), timeout);
+                new RequestInitItemsMessage(true, this.idKey, this.remotePath, storage.getStorage()), timeout);
 
         nodeActorLogger.debug("{}requestItemsToNextNode: waiting for next actor (key {}) to respond",
                 LOG_PREFIX, this.ring.getNextPeer(this.idKey));
@@ -328,9 +329,19 @@ public class NodeActor extends UntypedActor{
                 getSender().tell(reply, getSelf());
                 break;
             case "RequestInitItemsMessage":
-                // TODO: here we have to decide which Items to send back to the sender. So all the items with key that is smaller (or equal?) to the new node's key. Also be careful about the case in which an item has key greater than the greater node key in the system
-//                RequestInitItemsMessage reply = new RequestInitItemsMessage()
-//                getSender().tell(reply, getSelf());
+                RequestInitItemsMessage msg = ((RequestInitItemsMessage)message);
+
+                if(msg.isRequest()) {
+                    // receivedList contains all the Items in this node and not contained in the next one (so the Items I am the last responsible for)
+                    ArrayList<Item> receivedList = storage.retrieveAll(msg.getItems());
+                    // send Items collection to the new Peer
+                    RequestInitItemsMessage response = new RequestInitItemsMessage(false, receivedList);
+                    getSender().tell(response, getSelf());
+                    //remove them from my Storage: I'm not anymore responsible for them!
+                    storage.looseResponsabilityOf(receivedList);
+                } else {
+                    storage.acquireResponsabilityOf(msg.getItems());
+                }
                 break;
             case "OperationMessage":
                 // TODO: Check that we do not receive a read/write request while we are handling already another operation

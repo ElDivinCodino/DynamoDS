@@ -3,7 +3,7 @@ package dynamo.nodeutilities;
 /**
  * Class which represents  basic item we want to store and manage
  */
-public class Item {
+public class Item implements Comparable<Item>{
 
     private int key;
     private String value;
@@ -60,6 +60,7 @@ public class Item {
     /**
      *  overrides the java.lang.Object.toString() method, useful to manage the representation of the NodeUtilities.Item
      */
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
@@ -68,5 +69,14 @@ public class Item {
         sb.append(version);
 
         return sb.toString();
+    }
+
+    /**
+     *  overrides the java.lang.Comparable.compareTo(Object o) method, useful to sort Items
+     */
+    @Override
+    public int compareTo(Item compareWith) {
+
+        return (this.getKey() - compareWith.getKey()) ;
     }
 }

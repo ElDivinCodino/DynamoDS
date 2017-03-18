@@ -14,10 +14,11 @@ public class RequestInitItemsMessage implements Serializable {
     private Integer senderKey = null;
     private String senderRemotePath = null;
 
-    public RequestInitItemsMessage(boolean request, Integer senderKey, String senderRemotePath) {
+    public RequestInitItemsMessage(boolean request, Integer senderKey, String senderRemotePath, ArrayList<Item> items) {
         this.request = request;
         this.senderKey = senderKey;
         this.senderRemotePath = senderRemotePath;
+        this.items = items;
     }
 
     public RequestInitItemsMessage(boolean request, ArrayList<Item> items) {

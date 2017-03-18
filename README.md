@@ -27,6 +27,15 @@ Node to Node:
     - RemotePaths (send to self with path)
 
 - FRA
-    - Merge Client and ClientActor (use Future pattern)
-    - Review TODOs in Actor's onReceive and extend Storage class accordingly
+    - ~~Merge Client and ClientActor (use Future pattern)~~
+    - Review TODOs in NodeActor's onReceive and extend Storage class accordingly
+    
+
+### MAIN CHANGES
+
+- FRA 
+    - I've changed the constructor in RequestInitItemsMessage, allowing it to take an ArrayList also in request. This because this way I can maintain a reference to 
+    the Storage of the sender, doing the set difference of the Store of the newer w.r.t. the one of the older.
+    This way I could complete the "RequestInitItemsMessage" case. Please check if my idea is faulty or not (if I didn't take into consideration some borderline cases).
+    
     

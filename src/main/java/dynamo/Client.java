@@ -20,6 +20,7 @@ public class Client {
 
     private String remotePath;
     private ActorSystem system;
+    private int timeoutInSeconds = 5;
 
     public Client(String address, String port) {
         // load configuration from application.conf file
@@ -84,7 +85,7 @@ public class Client {
             // connect to the remote actor
             final ActorSelection remoteActor = system.actorSelection(remotePath);
 
-            Timeout timeout = new Timeout(Duration.create(5, "seconds"));
+            Timeout timeout = new Timeout(Duration.create(timeoutInSeconds, "seconds"));
             Future<Object> future = Patterns.ask(remoteActor, message, timeout);
 
             try {
