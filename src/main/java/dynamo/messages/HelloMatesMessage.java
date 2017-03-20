@@ -1,5 +1,7 @@
 package dynamo.messages;
 
+import akka.actor.ActorSelection;
+
 import java.io.Serializable;
 
 /**
@@ -7,12 +9,18 @@ import java.io.Serializable;
  */
 public class HelloMatesMessage implements Serializable {
 
+    private ActorSelection remoteSelection;
     private Integer key;
     private String remotePath;
 
-    public HelloMatesMessage(Integer key, String remotePath) {
+    public HelloMatesMessage(ActorSelection remoteSelection, Integer key, String remotePath) {
+        this.remoteSelection = remoteSelection;
         this.key = key;
         this.remotePath = remotePath;
+    }
+
+    public ActorSelection getRemoteSelection() {
+        return remoteSelection;
     }
 
     public Integer getKey() {
@@ -26,7 +34,8 @@ public class HelloMatesMessage implements Serializable {
     @Override
     public String toString() {
         return "HelloMatesMessage{" +
-                "key=" + key +
+                "remoteSelection=" + remoteSelection +
+                ", key=" + key +
                 ", remotePath='" + remotePath + '\'' +
                 '}';
     }

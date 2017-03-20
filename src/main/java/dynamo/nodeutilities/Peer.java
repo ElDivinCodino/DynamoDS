@@ -1,17 +1,19 @@
 package dynamo.nodeutilities;
 
-import akka.actor.ActorRef;
+import akka.actor.ActorSelection;
+
+import java.io.Serializable;
 
 
 /**
  * Created by StefanoFioravanzo on 14/03/2017.
  */
-public class Peer {
+public class Peer implements Serializable {
 
     // the akka remote path that identifies an actor.
     private String remotePath = null;
     // actor reference
-    private ActorRef me = null;
+    private ActorSelection remoteSelection = null;
     // unique (global) actor identifier
     private Integer key = null;
 
@@ -20,9 +22,9 @@ public class Peer {
         this.key = key;
     }
 
-    public Peer(String remotePath, ActorRef me, Integer key){
+    public Peer(String remotePath, ActorSelection remoteSelection, Integer key){
         this.remotePath = remotePath;
-        this.me = me;
+        this.remoteSelection = remoteSelection;
         this.key = key;
     }
 
@@ -36,12 +38,12 @@ public class Peer {
         this.remotePath = remotePath;
     }
 
-    public ActorRef getMe() {
-        return me;
+    public ActorSelection getRemoteSelection() {
+        return remoteSelection;
     }
 
-    public void setMe(ActorRef me) {
-        this.me = me;
+    public void setRemoteSelection(ActorSelection remoteSelection) {
+        this.remoteSelection = remoteSelection;
     }
 
     public Integer getKey() {
@@ -56,7 +58,7 @@ public class Peer {
     public String toString() {
         return "NodeUtilities.Peer{" +
                 "remotePath='" + remotePath + '\'' +
-                ", me=" + me +
+                ", remoteSelection=" + remoteSelection +
                 ", key=" + key +
                 '}';
     }

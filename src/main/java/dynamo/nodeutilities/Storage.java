@@ -13,6 +13,8 @@ public class Storage {
     // TODO: Pass to the constructor the path to be defined in the akka config (e.g. $HOME)
     private String pathname = "/storage/storage.txt";
 
+    public Storage() {}
+
     public Storage(ArrayList<Item> db) {
         this.db = db;
     }

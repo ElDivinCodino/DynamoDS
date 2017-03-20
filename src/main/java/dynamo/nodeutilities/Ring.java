@@ -17,7 +17,16 @@ public class Ring {
             peers.put(peer.getKey(), peer);
             return true;
         }
+        // TODO: throw an exception in case a key already exists. to do it here or in the main Node class.
         return false;
+    }
+
+    public boolean addPeers(TreeMap<Integer, Peer> peers){
+        for (Map.Entry<Integer, Peer> entry : peers.entrySet()){
+            if (!this.addPeer(entry.getValue()))
+                return false;
+        }
+        return true;
     }
 
     public boolean removePeer(Peer peer){
@@ -132,15 +141,13 @@ public class Ring {
         this.peers = peers;
     }
 
-//    /**
-//     * Comparator used to keep a collections of Peers sorted
-//     * by key.
-//     */
-//    public class NameComparator implements Comparator<NodeUtilities.Peer>
-//    {
-//        public int compare(NodeUtilities.Peer o1, NodeUtilities.Peer o2)
-//        {
-//            return o1.getKey().compareTo(o2.getKey());
-//        }
-//    }
+
+    @Override
+    public String toString() {
+        String output = "Ring: \n";
+        for (Map.Entry<Integer, Peer> entry : this.getPeers().entrySet()) {
+            output +=  "\t- " + entry.getValue().toString() + "\n";
+        }
+        return output;
+    }
 }

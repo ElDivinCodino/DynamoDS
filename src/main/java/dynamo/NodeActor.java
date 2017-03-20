@@ -4,7 +4,6 @@ import akka.actor.ActorRef;
 import akka.actor.Cancellable;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import com.sun.corba.se.spi.orb.Operation;
 import dynamo.messages.*;
 import dynamo.nodeutilities.Item;
 import dynamo.nodeutilities.Peer;
@@ -19,7 +18,6 @@ import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -58,7 +56,7 @@ public class NodeActor extends UntypedActor{
     // partial quorum counter
     private Integer quorum = 0;
     // the quorum that has to be reached (it changes based on read or write)
-    private Integer quorumTreshold = 0;
+    private Integer quorumThreshold = 0;
     // the new value to be updated
     private String newValue = null;
     // the reference of the client to respond to after the quorum operation
@@ -69,13 +67,22 @@ public class NodeActor extends UntypedActor{
     // A cancellable returned from the scheduler which lets us cancel the scheduled message
     private Cancellable scheduledTimeoutMessageCancellable;
 
-    public NodeActor(Integer n, Integer r, Integer w) {
+    public NodeActor(Integer id, Integer n, Integer r, Integer w) {
+        this.idKey = id;
         this.N = n;
         this.R = r;
         this.W = w;
         this.Q = Math.max(this.R, this.W);
 
         assert W + R > N;
+
+        // Now have to initialize current NodeUtilities.Ring class to manage Peers.
+        ring = new Ring();
+        // add self to the ring
+        ring.addPeer(new Peer(this.remotePath, context().actorSelection(self().path()),  this.idKey));
+
+        // initialize local storage
+        this.storage = new Storage();
     }
 
     /**
@@ -86,16 +93,10 @@ public class NodeActor extends UntypedActor{
      */
     private void sendMessageToReplicas(Object message, Integer itemKey) {
         for (Peer p : ring.getReplicasFromKey(this.N, itemKey)){
-            if (p.getRemotePath().equals("self")){
-                // TODO: handle message to self
-                // message to self should work like this
-                getSelf().tell(message, getSelf());
-            } else {
-                // TODO: check if we can send message to self with remote path, if true we can remove this if statement
-                getContext().actorSelection(p.getRemotePath()).tell(message, getSelf());
-                nodeActorLogger.debug("{}Sent message {} to Node {} ({})",
-                        LOG_PREFIX, message.toString(), p.getKey(), p.getRemotePath());
-            }
+            p.getRemoteSelection().tell(message, getSelf());
+            // getContext().actorSelection(p.getRemotePath()).tell(message, getSelf());
+            nodeActorLogger.debug("{}Sent message {} to Node {} ({})",
+                    LOG_PREFIX, message.toString(), p.getKey(), p.getRemotePath());
         }
     }
 
@@ -209,14 +210,14 @@ public class NodeActor extends UntypedActor{
         // the message returns a list of remotePaths and ids
         // from this we get the Remote reference to the actor
 
-        // Now have to initialize current NodeUtilities.Ring class to manage Peers.
-        ring = new Ring();
+        // Add to the ring the peers
+        ring.addPeers(msg.getPeers());
 
-        ring.setPeers(msg.getPeers());
-        // add self to the ring
-        ring.addPeer(new Peer(this.remotePath, this.idKey));
-        nodeActorLogger.debug("{}requestPeersToRemote: initialized Ring with {} peers",
+        nodeActorLogger.info("{}requestPeersToRemote: initialized Ring with {} peers",
                 LOG_PREFIX, this.ring.getNumberOfPeers());
+
+        // Print current state of ring
+        nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
     }
 
     /**
@@ -258,13 +259,14 @@ public class NodeActor extends UntypedActor{
      */
     private void announceSelfToSystem() {
         // here send a hello message to everyone.
-        HelloMatesMessage message = new HelloMatesMessage(this.idKey, this.remotePath);
+        HelloMatesMessage message = new HelloMatesMessage(getContext().actorSelection(self().path()),
+                this.idKey, this.remotePath);
         for (Map.Entry<Integer, Peer> entry : ring.getPeers().entrySet()) {
             Peer peer = entry.getValue();
             Integer key = entry.getKey();
             // we do not send a message to ourselves
             if (!this.idKey.equals(key)) {
-                getContext().actorSelection(peer.getRemotePath()).tell(message, getSelf());
+                peer.getRemoteSelection().tell(message, getSelf());
                 nodeActorLogger.debug("{}announceSelfToSystem: sent HelloMessage to remote Node with key {}",
                         LOG_PREFIX, key);
             }
@@ -287,15 +289,15 @@ public class NodeActor extends UntypedActor{
     public void onReceive(Object message) throws Exception {
         nodeActorLogger.info("{}Received Message {}", LOG_PREFIX, message.toString());
 
-        switch (message.getClass().getName()) {
+        switch (message.getClass().getName().split("[.]")[2]) {
             case "StartJoinMessage": // from actor system, request to join network
-                String remotePath = "akka.tcp://mysystem@"+
+                String remotePath = "akka.tcp://dynamo@"+
                         ((StartJoinMessage) message).getRemoteIp() + ":" +
                         ((StartJoinMessage) message).getRemotePort() + "/user/node";
                 requestPeersToRemote(remotePath);
                 // Here we request the items we are responsible for to the
                 // next node in the ring
-                requestItemsToNextNode();
+//                requestItemsToNextNode();
                 // Here we announce our presence to the whole system
                 announceSelfToSystem();
                 break;
@@ -304,8 +306,12 @@ public class NodeActor extends UntypedActor{
                 // deletes items from its storage if necessary
                 Peer peer = new Peer(
                         ((HelloMatesMessage) message).getRemotePath(),
+                        ((HelloMatesMessage) message).getRemoteSelection(),
                         ((HelloMatesMessage) message).getKey());
                 ring.addPeer(peer);
+                nodeActorLogger.info("Added {} to local ring", peer.toString());
+                // Print current state of ring
+                nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
                 // TODO: delete from storage unnecessary items, we have to delete all item with key SMALLER than the remoteKey (smaller or equal?)
                 // TODO: Useful API in Storage to delete all items smaller that a certain key
                 break;
@@ -325,7 +331,8 @@ public class NodeActor extends UntypedActor{
                     // TODO: assume control of the relevant data (to be implemented in Storage class)
                 }
                 break;
-            case "PeerListMessage":
+            case "PeersListMessage":
+                System.out.println("peer list entrato");
                 PeersListMessage reply = new PeersListMessage(false, ring.getPeers());
                 getSender().tell(reply, getSelf());
                 break;
@@ -359,9 +366,9 @@ public class NodeActor extends UntypedActor{
                     this.clientReferenceRequest = getSender();
                     this.readOperation = true;
                     if (opMessage.isRead()){
-                        this.quorumTreshold = this.R;
+                        this.quorumThreshold = this.R;
                     } else{
-                        this.quorumTreshold = this.Q;
+                        this.quorumThreshold = this.Q;
                         this.newValue = opMessage.getValue();
                     }
                     this.scheduleTimeout(2, TimeUnit.SECONDS);
@@ -393,7 +400,7 @@ public class NodeActor extends UntypedActor{
                              to client and reset variables. Here clearly we assume that
                              a Node can handle just one read request from a client at a time.
                             */
-                            if (quorum.equals(this.quorumTreshold)){
+                            if (quorum.equals(this.quorumThreshold)){
                                 if (this.readOperation){
                                     // respond to the client with the proper item
                                     this.handleReadResponseToClient();
@@ -402,7 +409,7 @@ public class NodeActor extends UntypedActor{
                                     this.issueUpdateToReplicas();
                                 }
                                 this.quorum = 0;
-                                this.quorumTreshold = 0;
+                                this.quorumThreshold = 0;
                                 this.waitingQuorum = false;
                                 this.readResponseMessages.clear();
                                 this.clientReferenceRequest = null;
@@ -427,7 +434,7 @@ public class NodeActor extends UntypedActor{
                             null);
                     clientReferenceRequest.tell(clientResponse, getSelf());
                     this.quorum = 0;
-                    this.quorumTreshold = 0;
+                    this.quorumThreshold = 0;
                     this.waitingQuorum = false;
                     this.readResponseMessages.clear();
                     this.clientReferenceRequest = null;
