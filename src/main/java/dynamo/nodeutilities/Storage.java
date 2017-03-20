@@ -20,7 +20,7 @@ public class Storage {
     }
 
     /**
-     * updates an NodeUtilities.Item in the NodeUtilities.Storage, if already present, or adds it to the Storage if not
+     * updates an NodeUtilities.Item in the NodeUtilities.Storage, if already present, or adds it to the Storage if not. Items are stored in crescent order
      *
      * @param key the key of the NodeUtilities.Item
      * @param value the updated value of the NodeUtilities.Item
@@ -49,7 +49,7 @@ public class Storage {
     }
 
     /**
-     * deletes an NodeUtilities.Item from the NodeUtilities.Storage
+     * deletes a NodeUtilities.Item from the NodeUtilities.Storage
      *
      * @param key the key of the NodeUtilities.Item
      */
@@ -65,6 +65,26 @@ public class Storage {
                 return;
             }
         }
+    }
+
+    /**
+     * deletes NodeUtilities.Item up to a certain value from the NodeUtilities.Storage
+     *
+     * @param key the key of the NodeUtilities.Item
+     */
+    public void deleteUpTo(int key) {
+        Item item;
+
+        while(db.size() > 0) {
+            item = db.get(0); // we exploit the fact that elements are sorted in crescent order
+
+            if(item.getKey() < key) { //TODO choose if less / less or equal
+                db.remove(item);
+            } else {
+                return;
+            }
+        }
+        return;
     }
 
     /**
@@ -99,9 +119,8 @@ public class Storage {
         return null;
     }
 
-    /*
-     * @param i the threshold: retrieve Items until i
-     * @param b if true means that the two nodes are one the tail and one the head of the ring
+    /**
+     * @param storage the node next to the current
      * @return the list of the Items that are stored in this node but not in the next one
      */
     public ArrayList<Item> retrieveAll(ArrayList<Item> storage) {
@@ -111,20 +130,22 @@ public class Storage {
         return list;
     }
 
-    /*
-     * This method deletes, after a new Node joining the system, the Items the Storage is not anymore responsible for
-     * @param list the list of Items the Storage is not anymore responsible for
+    /**
+     * This method deletes, after a Node joining or leaving the system, the Items the Storage is not anymore responsible for
+     * @param receivedList the list of Items the Storage is not anymore responsible for
      */
     public void looseResponsabilityOf(ArrayList<Item> receivedList) {
         db.removeAll(receivedList);
+        save();
     }
 
-    /*
-     * This method deletes, after a new Node joining the system, the Items the Storage is not anymore responsible for
-     * @param list the list of Items the Storage is not anymore responsible for
+    /**
+     * This method adds, after a Node joining or leaving the system, the Items the Storage is now responsible for
+     * @param receivedList the list of Items the Storage is not anymore responsible for
      */
     public void acquireResponsabilityOf(ArrayList<Item> receivedList) {
         db.addAll(receivedList);
+        save();
     }
 
     /*

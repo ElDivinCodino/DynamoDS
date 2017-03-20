@@ -314,6 +314,8 @@ public class NodeActor extends UntypedActor{
                 nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
                 // TODO: delete from storage unnecessary items, we have to delete all item with key SMALLER than the remoteKey (smaller or equal?)
                 // TODO: Useful API in Storage to delete all items smaller that a certain key
+                // (FRA)
+                // CREATO IL METODO DELETEUPTO, LEGGERE IL TODO PRESENTE Lì
                 break;
             case "ByeMatesMessage":
                 /*
@@ -324,6 +326,7 @@ public class NodeActor extends UntypedActor{
                     remove it from our topology
                  */
                 Integer senderKey = ((ByeMatesMessage) message).getKey();
+                ArrayList<Item> senderStorage = ((ByeMatesMessage) message).getItems();
                 boolean removed = ring.removePeer(senderKey);
                 assert removed;
 
@@ -378,10 +381,19 @@ public class NodeActor extends UntypedActor{
                         if (opMessage.isRead()){
                             // A node is requiring a data item
                             // TODO: ask Storage class for the data item with specific key
+                            // (FRA)
+                            Item item = storage.getItem(opMessage.getKey());
                             // TODO: handle missing key case
+                            // (FRA)
+                            if (item == null) // if i have no useful info to give, just not answer
+                                unhandled(opMessage);
                             // TODO: send data back to sender
+                            // (FRA)
+                            getSender().tell(new OperationMessage(false, false, true, item.getKey(), item.getValue(), item.getVersion()), getSelf());
                         } else{ // isUpdate
                             // TODO: a node is telling us to update an element in our storage (update the version)
+                            // (FRA)
+                            storage.update(opMessage.getKey(), opMessage.getValue(), opMessage.getVersion());
                         }
                     } else{
                         // we can have responses just from read requests, not from update requests
