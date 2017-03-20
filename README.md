@@ -2,7 +2,7 @@
 
 
 
-### Messages
+## Messages
 
 ActorSystem to Node:
 
@@ -23,8 +23,9 @@ Node to Node:
 ### TODOs
 
 - STE
-    - Logging
-    - RemotePaths (send to self with path)
+    - ~~Logging~~
+    - ~~RemotePaths (send to self with path)~~
+    - Finish remote communication with client
 
 - FRA
     - ~~Merge Client and ClientActor (use Future pattern)~~
@@ -39,3 +40,51 @@ Node to Node:
     This way I could complete the "RequestInitItemsMessage" case. Please check if my idea is faulty or not (if I didn't take into consideration some borderline cases).
     Modified for this purpose also requestItemsToNextNode() method, see comments in the code.
     
+    
+### REMOTE COMMUNICATION
+
+For the moment, the first node of the system is started as `Node start id` where id is its key. Then each new node is stared in the normal way, clearly the second will be given the port and address of the first node.
+
+Moreover, for now each node get its unique id as follows: `Node join remote_ip remote_port local_id` so as last argument when running the application. We can decide to change this in the future, but for now it is handy so we can better control what ids to use.
+
+All port are defined as 10000 + id, so for a node with id=15 it will have port 10015
+
+### BUILD.GRADLE
+
+```group 'dynamo'
+
+apply plugin: 'java'
+apply plugin:'application'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+    compile group: 'com.typesafe.akka', name: 'akka-actor_2.11', version: '2.4.17'
+    compile group: 'com.typesafe.akka', name: 'akka-remote_2.11', version: '2.4.17'
+}
+
+run {
+
+    if ( project.hasProperty("appArgs") ) {
+
+        args Eval.me(appArgs)
+
+    }
+
+}
+
+mainClassName = "dynamo.Node"
+```
+
+In order to run and compile the project form command line a few modifications to the `gradle.build` file have to be made. The second compile group is need to add the remote akka's framework to allow for remote communication. The `application` plugin is needed to use the `run` gradle command to run the project from CLI. The `run` function defined lets you apply also arguments to the main. To run the project go to the root project folder and run: `./gradlew run -PappArgs="['start', '10']"`. Inside the array you can specify all the arguments you need.
+
+I have yet to search how to dynamically change the `mainClassName` parameter in `build.gradle` to switch between client and node.
+
+## REPLICATION CONSTANTS
+
+For now I am loading the replication and quorum constants from the configuration file `application.conf`. See the code in Node.java.

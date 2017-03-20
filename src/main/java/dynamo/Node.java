@@ -45,7 +45,7 @@ public class Node {
                 join = true;
             }
 
-            // TODO: Have to generate here a unique id key for the node?
+            // TODO: Have to generate here a unique id key for the node? For now we are taking it from CLI
 
             if (join){
                 remoteIp = args[1];
