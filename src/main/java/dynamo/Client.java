@@ -26,7 +26,7 @@ public class Client {
         // load configuration from application.conf file
         final Config config = ConfigFactory.load();
 
-        this.remotePath = "akka.tcp://mysystem@"+address+":"+port+"/user/node";
+        this.remotePath = "akka.tcp://dynamo@"+address+":"+port+"/user/node";
         this.system = ActorSystem.create("system", config);
     }
     public static void main(String[] args) {

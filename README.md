@@ -51,39 +51,46 @@ All port are defined as 10000 + id, so for a node with id=15 it will have port 1
 
 ### BUILD.GRADLE
 
-```group 'dynamo'
+```/**
+ * Custom Gradle task to run the Client CLI.
+ * You can run the application in this way: ./gradlew node -Pmyargs="arg1 arg2 ..."
+ */
+task node(type: JavaExec) {
+    classpath sourceSets.main.runtimeClasspath
+    jvmArgs = ['-ea']
+    main = 'dynamo.Node'
 
-apply plugin: 'java'
-apply plugin:'application'
-
-sourceCompatibility = 1.8
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.11'
-    compile group: 'com.typesafe.akka', name: 'akka-actor_2.11', version: '2.4.17'
-    compile group: 'com.typesafe.akka', name: 'akka-remote_2.11', version: '2.4.17'
-}
-
-run {
-
-    if ( project.hasProperty("appArgs") ) {
-
-        args Eval.me(appArgs)
-
+    // this way we can pass some parameters to the java app
+    if (project.hasProperty('myargs')) {
+        args(myargs.split(' '))
     }
-
 }
 
-mainClassName = "dynamo.Node"
+/**
+ * Custom Gradle task to run the Client CLI.
+ * You can run the application in this way: ./gradlew client -Pmyargs="arg1 arg2 ..."
+ */
+task client(type: JavaExec) {
+    classpath sourceSets.main.runtimeClasspath
+    jvmArgs = ['-ea']
+    main = 'dynamo.Client'
+
+    // this way we can pass some parameters to the java app
+    if (project.hasProperty('myargs')) {
+        args(myargs.split(' '))
+    }
+}
 ```
 
-In order to run and compile the project form command line a few modifications to the `gradle.build` file have to be made. The second compile group is need to add the remote akka's framework to allow for remote communication. The `application` plugin is needed to use the `run` gradle command to run the project from CLI. The `run` function defined lets you apply also arguments to the main. To run the project go to the root project folder and run: `./gradlew run -PappArgs="['start', '10']"`. Inside the array you can specify all the arguments you need.
+In order to run and compile the project form command line a few modifications to the `gradle.build` file have to be made. Add the above tasks to the file in order to execute from CLI the application. 
 
-I have yet to search how to dynamically change the `mainClassName` parameter in `build.gradle` to switch between client and node.
+The commands to run it are specified in the comments.
+
+Also, in order to compile successfully, you need to add a second compile group:
+
+`compile group: 'com.typesafe.akka', name: 'akka-remote_2.11', version: '2.4.17'`
+
+to include akka's remote communication utilities.
 
 ## REPLICATION CONSTANTS
 
