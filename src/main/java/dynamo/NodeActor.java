@@ -170,9 +170,12 @@ public class NodeActor extends UntypedActor{
      * Send success message to client and then tell the replicas
      * to update their data item with the new value and latest version number.
      */
-    private void issueUpdateToReplicas(){
-        Item latest = getLatestVersionItemFromResponses();
-        // send success resposnse to client
+    private void issueUpdateToReplicas(Item item){
+        if (item == null) {
+            item = getLatestVersionItemFromResponses();
+        }
+
+        // send success response to client
         OperationMessage clientResponse = new OperationMessage(
                 false,
                 false,
@@ -184,18 +187,18 @@ public class NodeActor extends UntypedActor{
         nodeActorLogger.debug("issueUpdateToReplicas: message {} sent to client",
                 clientResponse.toString());
         // issue update to replicas
-        Integer newVersion = latest.getVersion() + 1;
+        Integer newVersion = item.getVersion() + 1;
         OperationMessage issueUpdate = new OperationMessage(
                 false,
                 true,
                 false,
-                latest.getKey(),
+                item.getKey(),
                 this.newValue,
                 newVersion);
         // send update message to replicas
         nodeActorLogger.debug("issueUpdateToReplicas: call sendMessageToReplicas with message {}",
                 issueUpdate.toString());
-        sendMessageToReplicas(issueUpdate, latest.getKey());
+        sendMessageToReplicas(issueUpdate, item.getKey());
     }
 
 
@@ -396,39 +399,47 @@ public class NodeActor extends UntypedActor{
                     // if the message is coming from the client it must be a request
                     assert opMessage.isRequest();
                     /*
-                     So we have received a read operation from the client.
+                     So we have received a read/write operation from the client.
                      So we have to contact the nodes responsible for the specified item
                      to retrieve the data.
                     */
                     // save a reference to the client to be used to respond later
                     this.clientReferenceRequest = getSender();
-                    this.readOperation = true;
                     if (opMessage.isRead()){
+                        this.readOperation = true;
                         this.quorumThreshold = this.R;
                     } else{
                         this.quorumThreshold = this.Q;
+                        this.readOperation = false;
                         this.newValue = opMessage.getValue();
                     }
                     this.scheduleTimeout(2, TimeUnit.SECONDS);
                     this.handleClientReadRequest(opMessage.getKey());
                 } else{ // isNode
                     if (opMessage.isRequest()){
+                        // TODO: Consideration: è possibile che un nodo non abbia un item che dovrebbe avere? Magari per qualche crash? Oppure in ogni caso, se faccio una richiesta agli N nodi replica, sono sicuro che l'item c'è in tutti? (la cosa può dare problemi nel caso dell'update)
                         if (opMessage.isRead()){
                             // A node is requiring a data item
                             // TODO: ask Storage class for the data item with specific key
-                            // (FRA)
                             Item item = storage.getItem(opMessage.getKey());
                             // TODO: handle missing key case
-                            // (FRA)
-                            if (item == null) // if i have no useful info to give, just not answer
-                                unhandled(opMessage);
-                            // TODO: send data back to sender
-                            // (FRA)
-                            getSender().tell(new OperationMessage(false, false, true, item.getKey(), item.getValue(), item.getVersion()), getSelf());
+                            // In case the is not item with this key, return the message with null
+                            // version number. In this way the coordinator can issue an update
+                            // to all replicas with version number 1 and the item will be created.
+                            if (item == null) {
+                                getSender().tell(new OperationMessage(false, false,
+                                        true, opMessage.getKey(), opMessage.getValue(), null),
+                                        getSelf());
+                            } else {
+                                getSender().tell(new OperationMessage(false, false,
+                                        true, item.getKey(), item.getValue(), item.getVersion()),
+                                        getSelf());
+                            }
                         } else{ // isUpdate
                             // TODO: a node is telling us to update an element in our storage (update the version)
                             // (FRA)
-                            storage.update(opMessage.getKey(), opMessage.getValue(), opMessage.getVersion());
+                            this.storage.update(opMessage.getKey(), opMessage.getValue(), opMessage.getVersion());
+                            nodeActorLogger.info(this.storage.toString());
                         }
                     } else{
                         // we can have responses just from read requests, not from update requests
@@ -439,7 +450,25 @@ public class NodeActor extends UntypedActor{
                          to have at least R replies before sending the response back to
                          the client
                         */
-                        if (waitingQuorum){
+
+                        // in case the node did not have the requested item, it means that we have to insert it
+                        // TODO: also we have to check that we have requested a write in some way (maybe use the value field and check it is not null?)
+                        if (((OperationMessage) message).getVersion() == null && !this.readOperation){
+                            // TODO: check the logic of this, is it ok done in this way?
+                            // stop the quorum operation
+                            this.quorum = 0;
+                            this.quorumThreshold = 0;
+                            this.waitingQuorum = false;
+                            this.readResponseMessages.clear();
+                            this.clientReferenceRequest = null;
+
+                            Item newItem = new Item(((OperationMessage) message).getKey(),
+                                    ((OperationMessage) message).getValue(), 1);
+                            // send to replicas the new element.
+                            this.issueUpdateToReplicas(newItem);
+
+
+                        } else if (waitingQuorum){
                             this.quorum++;
                             this.readResponseMessages.add((OperationMessage) message);
                             /*
@@ -453,7 +482,7 @@ public class NodeActor extends UntypedActor{
                                     this.handleReadResponseToClient();
                                 } else{
                                     // report success to client and send the correct update to the replicas
-                                    this.issueUpdateToReplicas();
+                                    this.issueUpdateToReplicas(null);
                                 }
                                 this.quorum = 0;
                                 this.quorumThreshold = 0;

@@ -88,7 +88,7 @@ public class Client {
      * @param key key of the needed NodeUtilities.Item
      */
     private void get(int key) {
-        sendRequest(new GetMessage(key));
+        sendRequest(new OperationMessage(true, true, true, key, null));
     }
 
     /**

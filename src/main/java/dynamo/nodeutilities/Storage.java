@@ -13,7 +13,9 @@ public class Storage {
     // TODO: Pass to the constructor the path to be defined in the akka config (e.g. $HOME)
     private String pathname = "/storage/storage.txt";
 
-    public Storage() {}
+    public Storage() {
+        this.db = new ArrayList<>();
+    }
 
     public Storage(ArrayList<Item> db) {
         this.db = db;
@@ -170,10 +172,10 @@ public class Storage {
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        for(int i = 0; i < db.size(); i++) {
-            sb.append(db.get(i) + "\n");
+        sb.append("Storage: \n");
+        for (Item aDb : db) {
+            sb.append("\t- ").append(aDb).append("\n");
         }
-
         return sb.toString();
     }
 

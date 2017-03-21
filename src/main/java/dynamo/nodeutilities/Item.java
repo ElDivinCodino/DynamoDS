@@ -58,17 +58,15 @@ public class Item implements Comparable<Item>{
     }
 
     /**
-     *  overrides the java.lang.Object.toString() method, useful to manage the representation of the NodeUtilities.Item
+     * overrides the java.lang.Object.toString() method, useful to manage the representation of the NodeUtilities.Item
      */
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(key + "\t\t");
-        sb.append(value + "\t\t");
-        sb.append(version);
-
-        return sb.toString();
+        return "Item{" +
+                "key=" + key +
+                ", value='" + value + '\'' +
+                ", version=" + version +
+                '}';
     }
 
     /**
