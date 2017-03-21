@@ -23,8 +23,6 @@ import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
 
-    String LOG_PREFIX = "[Node Actor] ";
-
     LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
 
     // For know we hard code these values
@@ -86,6 +84,26 @@ public class NodeActor extends UntypedActor{
     }
 
     /**
+     *
+     * Broadcast a message to every Peer in the system, save the local node
+     * @param message The message to be sent
+     * @param logMessage The message to be printed to CLI
+     */
+    private void broadcastToPeers(Object message, String logMessage){
+        for (Map.Entry<Integer, Peer> entry : ring.getPeers().entrySet()) {
+            Peer peer = entry.getValue();
+            Integer key = entry.getKey();
+            // we do not send a message to ourselves
+            if (!this.idKey.equals(key)) {
+                peer.getRemoteSelection().tell(message, getSelf());
+                if (logMessage != null){
+                    nodeActorLogger.debug(logMessage);
+                }
+            }
+        }
+    }
+
+    /**
      * Send a message to the replicas responsible for
      * data item with a certain key
      * @param message the message to be sent (must implement Serializable interface)
@@ -95,8 +113,8 @@ public class NodeActor extends UntypedActor{
         for (Peer p : ring.getReplicasFromKey(this.N, itemKey)){
             p.getRemoteSelection().tell(message, getSelf());
             // getContext().actorSelection(p.getRemotePath()).tell(message, getSelf());
-            nodeActorLogger.debug("{}Sent message {} to Node {} ({})",
-                    LOG_PREFIX, message.toString(), p.getKey(), p.getRemotePath());
+            nodeActorLogger.debug("Sent message {} to Node {} ({})",
+                    message.toString(), p.getKey(), p.getRemotePath());
         }
     }
 
@@ -105,7 +123,7 @@ public class NodeActor extends UntypedActor{
      * @param itemKey the item's key to retrieve
      */
     private void handleClientReadRequest(Integer itemKey) {
-        nodeActorLogger.debug("{}handleClientReadRequest: itemKey {}", LOG_PREFIX, itemKey);
+        nodeActorLogger.debug("handleClientReadRequest: itemKey {}", itemKey);
         OperationMessage readRequest = new OperationMessage(false, true, true, itemKey, null);
         // send a retrieve message to each one of the replicas (check if one of these is SELF)
         sendMessageToReplicas(readRequest, itemKey);
@@ -117,7 +135,7 @@ public class NodeActor extends UntypedActor{
      * @return an Item object with value, key and version number
      */
     private Item getLatestVersionItemFromResponses() {
-        nodeActorLogger.debug("{}getLatestVersionItemFromResponses", LOG_PREFIX);
+        nodeActorLogger.debug("getLatestVersionItemFromResponses");
         int v = 0;
         OperationMessage max = readResponseMessages.get(0);
         for (OperationMessage msg : readResponseMessages){
@@ -143,8 +161,8 @@ public class NodeActor extends UntypedActor{
                 latest.getKey(),
                 latest.getValue(),
                 latest.getVersion());
-        nodeActorLogger.debug("{}handleReadResponseToClient: message {} sent to client",
-                LOG_PREFIX, response.toString());
+        nodeActorLogger.debug("handleReadResponseToClient: message {} sent to client",
+                response.toString());
         clientReferenceRequest.tell(response, getSelf());
     }
 
@@ -163,8 +181,8 @@ public class NodeActor extends UntypedActor{
                 "success",
                 null);
         clientReferenceRequest.tell(clientResponse, getSelf());
-        nodeActorLogger.debug("{}issueUpdateToReplicas: message {} sent to client",
-                LOG_PREFIX, clientResponse.toString());
+        nodeActorLogger.debug("issueUpdateToReplicas: message {} sent to client",
+                clientResponse.toString());
         // issue update to replicas
         Integer newVersion = latest.getVersion() + 1;
         OperationMessage issueUpdate = new OperationMessage(
@@ -175,8 +193,8 @@ public class NodeActor extends UntypedActor{
                 this.newValue,
                 newVersion);
         // send update message to replicas
-        nodeActorLogger.debug("{}issueUpdateToReplicas: call sendMessageToReplicas with message {}",
-                LOG_PREFIX, issueUpdate.toString());
+        nodeActorLogger.debug("issueUpdateToReplicas: call sendMessageToReplicas with message {}",
+                issueUpdate.toString());
         sendMessageToReplicas(issueUpdate, latest.getKey());
     }
 
@@ -198,7 +216,7 @@ public class NodeActor extends UntypedActor{
         final Future<Object> future = Patterns.ask(remoteActor,
                 new PeersListMessage(true), timeout);
 
-        nodeActorLogger.debug("{}requestPeersToRemote: waiting for response from {}", LOG_PREFIX, remotePath);
+        nodeActorLogger.debug("requestPeersToRemote: waiting for response from {}", remotePath);
 
         // wait for an acknowledgement
         final Object message = Await.result(future, timeout.duration());
@@ -213,8 +231,8 @@ public class NodeActor extends UntypedActor{
         // Add to the ring the peers
         ring.addPeers(msg.getPeers());
 
-        nodeActorLogger.info("{}requestPeersToRemote: initialized Ring with {} peers",
-                LOG_PREFIX, this.ring.getNumberOfPeers());
+        nodeActorLogger.info("requestPeersToRemote: initialized Ring with {} peers",
+                this.ring.getNumberOfPeers());
 
         // Print current state of ring
         nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
@@ -237,8 +255,8 @@ public class NodeActor extends UntypedActor{
         final Future<Object> future = Patterns.ask(remoteActor,
                 new RequestInitItemsMessage(true, this.idKey, this.remotePath, storage.getStorage()), timeout);
 
-        nodeActorLogger.debug("{}requestItemsToNextNode: waiting for next actor (key {}) to respond",
-                LOG_PREFIX, this.ring.getNextPeer(this.idKey));
+        nodeActorLogger.debug("requestItemsToNextNode: waiting for next actor (key {}) to respond",
+                this.ring.getNextPeer(this.idKey));
 
         // wait for an acknowledgement
         final Object message = Await.result(future, timeout.duration());
@@ -258,19 +276,22 @@ public class NodeActor extends UntypedActor{
      * to announce the new node.
      */
     private void announceSelfToSystem() {
-        // here send a hello message to everyone.
+        // send a hello message to everyone.
         HelloMatesMessage message = new HelloMatesMessage(getContext().actorSelection(self().path()),
                 this.idKey, this.remotePath);
-        for (Map.Entry<Integer, Peer> entry : ring.getPeers().entrySet()) {
-            Peer peer = entry.getValue();
-            Integer key = entry.getKey();
-            // we do not send a message to ourselves
-            if (!this.idKey.equals(key)) {
-                peer.getRemoteSelection().tell(message, getSelf());
-                nodeActorLogger.debug("{}announceSelfToSystem: sent HelloMessage to remote Node with key {}",
-                        LOG_PREFIX, key);
-            }
-        }
+        String logMessage = "announceSelfToSystem: sent HelloMatesMessage to remote Node with key " + this.idKey;
+        this.broadcastToPeers(message, logMessage);
+    }
+
+    /**
+     * Send a message to every one in the network (except to self)
+     * to account we are leaving the system.
+     */
+    private void leaveSystem(){
+        // send a leave message to everyone
+        ByeMatesMessage message = new ByeMatesMessage(this.idKey, this.storage.getStorage());
+        String logMessage = "leaveSystem: send ByematesMessage to remote Node with key " + this.idKey;
+        this.broadcastToPeers(message, logMessage);
     }
 
     /**
@@ -282,13 +303,14 @@ public class NodeActor extends UntypedActor{
         this.scheduledTimeoutMessageCancellable = getContext().system().scheduler().scheduleOnce(
                 Duration.create(time, unit),
                 getSelf(), new TimeoutMessage(), getContext().system().dispatcher(), getSelf());
-        nodeActorLogger.debug("{}scheduleTimeout: scheduled timeout in {} {}",
-                LOG_PREFIX, time, unit.toString());
+        nodeActorLogger.debug("scheduleTimeout: scheduled timeout in {} {}",
+                time, unit.toString());
     }
 
     public void onReceive(Object message) throws Exception {
-        nodeActorLogger.info("{}Received Message {}", LOG_PREFIX, message.toString());
+        nodeActorLogger.info("Received Message {}", message.toString());
 
+        // class name is represented as dynamo.messages.className, so split and take last element.
         switch (message.getClass().getName().split("[.]")[2]) {
             case "StartJoinMessage": // from actor system, request to join network
                 String remotePath = "akka.tcp://dynamo@"+
@@ -317,6 +339,14 @@ public class NodeActor extends UntypedActor{
                 // (FRA)
                 // CREATO IL METODO DELETEUPTO, LEGGERE IL TODO PRESENTE Lì
                 break;
+            case "LeaveMessage":
+                // send message to everyone that we are leaving. Send also local storage alongside
+                // interested peers will pick it up.
+                this.leaveSystem();
+                // send response to client and shutdown system
+                getSender().tell(new LeaveMessage(), getSelf());
+                context().system().shutdown();
+                break;
             case "ByeMatesMessage":
                 /*
                     So one node in the network told us it is leaving.
@@ -328,7 +358,12 @@ public class NodeActor extends UntypedActor{
                 Integer senderKey = ((ByeMatesMessage) message).getKey();
                 ArrayList<Item> senderStorage = ((ByeMatesMessage) message).getItems();
                 boolean removed = ring.removePeer(senderKey);
-                assert removed;
+
+                if (!removed){
+                    throw new Exception("Ring did not contain a Peer with key " + senderKey);
+                }
+
+                nodeActorLogger.info(this.ring.toString());
 
                 if (ring.selfIsNextNClockwise(senderKey, this.N, this.idKey)){
                     // TODO: assume control of the relevant data (to be implemented in Storage class)

@@ -2,56 +2,75 @@ package dynamo;
 
 import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
+import akka.event.Logging;
+import akka.event.LoggingAdapter;
 import akka.pattern.Patterns;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import dynamo.messages.GetMessage;
 import dynamo.messages.LeaveMessage;
 import dynamo.messages.OperationMessage;
+import dynamo.nodeutilities.Utilities;
 import scala.concurrent.Future;
 import scala.concurrent.Await;
 import akka.util.Timeout;
 import scala.concurrent.duration.Duration;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * This class represents the interface for the client
  */
 public class Client {
 
+    // used by default as seconds
+    final private Integer MESSAGE_TIMEOUT = 5;
+
     private String remotePath;
     private ActorSystem system;
-    private int timeoutInSeconds = 5;
+    private LoggingAdapter clientLogger;
+
 
     public Client(String address, String port) {
         // load configuration from application.conf file
         final Config config = ConfigFactory.load();
+        Config myConfig = ConfigFactory.load("application");
+
+        // bind the client to a random port
+        Integer randomPort = Utilities.getAvailablePort(10000, 10100);
+        Config custom = ConfigFactory.parseString("akka.remote.netty.tcp.hostname = localhost, akka.remote.netty.tcp.port = " + randomPort);
 
         this.remotePath = "akka.tcp://dynamo@"+address+":"+port+"/user/node";
-        this.system = ActorSystem.create("system", config);
+        this.system = ActorSystem.create("dynamo", custom.withFallback(myConfig));
+
+        this.clientLogger = this.system.log();
     }
+
     public static void main(String[] args) {
 
         Client newClient;
+        String address = null;
+        String port= null;
 
         if(args.length > 2) {
-            String address = args[0];
-            String port = args[1];
-
-            newClient = new Client(address, port);
+            address = args[0];
+            port = args[1];
         } else{
             System.out.println("Sorry, command not found.");
-            return;
+            System.exit(-1);
         }
 
-        if(args[2] == "read" && args.length == 4) {
+        newClient = new Client(address, port);
+
+        if(args[2].equals("read") && args.length == 4) {
             newClient.get(Integer.parseInt(args[3]));
-        } else if (args[2] == "write" && args.length == 5) {
+        } else if (args[2].equals("write") && args.length == 5) {
             newClient.update(Integer.parseInt(args[3]), args[4]);
-        } else if (args[2] == "leave" && args.length == 3) {
+        } else if (args[2].equals("leave") && args.length == 3) {
             newClient.leave();
         } else {
             System.out.println("Sorry, command not found.");
-            return;
+            System.exit(-1);
         }
     }
 
@@ -60,7 +79,7 @@ public class Client {
      * @param key key of the NodeUtilities.Item to be updated
      * @param value the new value of the NodeUtilities.Item
      */
-    public void update(int key, String value) {
+    private void update(int key, String value) {
         sendRequest(new OperationMessage(true, true, false, key, value));
     }
 
@@ -68,14 +87,14 @@ public class Client {
      * send a get request to the coordinator
      * @param key key of the needed NodeUtilities.Item
      */
-    public void get(int key) {
+    private void get(int key) {
         sendRequest(new GetMessage(key));
     }
 
     /**
      * send a leave request to the coordinator
      */
-    public void leave() {
+    private void leave() {
         sendRequest(new LeaveMessage());
     }
 
@@ -85,7 +104,7 @@ public class Client {
             // connect to the remote actor
             final ActorSelection remoteActor = system.actorSelection(remotePath);
 
-            Timeout timeout = new Timeout(Duration.create(timeoutInSeconds, "seconds"));
+            Timeout timeout = new Timeout(Duration.create(MESSAGE_TIMEOUT, TimeUnit.SECONDS));
             Future<Object> future = Patterns.ask(remoteActor, message, timeout);
 
             try {
@@ -112,5 +131,6 @@ public class Client {
                 e.printStackTrace();
             }
         }
+        System.exit(0);
     }
 }

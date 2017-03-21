@@ -30,15 +30,11 @@ public class Ring {
     }
 
     public boolean removePeer(Peer peer){
-        if (peers.containsKey(peer.getKey())) {
-            peers.remove(peer.getKey());
-            return true;
-        }
-        return false;
+        return this.removePeer(peer.getKey());
     }
 
     public boolean removePeer(Integer key){
-        if (!peers.containsKey(key)){
+        if (peers.containsKey(key)){
             peers.remove(key);
             return true;
         }
