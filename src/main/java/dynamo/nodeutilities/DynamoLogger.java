@@ -21,7 +21,12 @@ public class DynamoLogger {
 
     private String applyArgsToString(String message, Object[] args){
         for (Object arg : args) {
-            message = message.replaceFirst("\\{\\}", arg.toString());
+            if (arg == null){
+                message = message.replaceFirst("\\{\\}", "null");
+            } else {
+                message = message.replaceFirst("\\{\\}", arg.toString());
+            }
+
         }
         return message;
     }

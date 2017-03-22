@@ -20,8 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
 
-    LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
-//    DynamoLogger nodeActorLogger = new DynamoLogger();
+//    LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
+    DynamoLogger nodeActorLogger = new DynamoLogger();
 
     // For know we hard code these values
     // Think about maybe reading them form the config at
@@ -80,7 +80,7 @@ public class NodeActor extends UntypedActor{
         // initialize local storage
         this.storage = new Storage();
 
-        //this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.DEBUG);
+        this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.DEBUG);
     }
 
     /**
