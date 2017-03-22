@@ -465,7 +465,7 @@ public class NodeActor extends UntypedActor{
                          to have at least R replies before sending the response back to
                          the client
                         */
-                        if (waitingQuorum){
+                        if (true){
                             // in case the node did not have the requested item, it means that we have to insert it
                             // HERE WE ARE ASSUMING THAT IF AT LEAST ONE NODE DOES NOT HAVE THE ITEM,
                             // THEN ALSO ALL THE OTHER REPLICAS DON'T AS WELL

@@ -33,7 +33,7 @@ public class Storage {
 
         int i = 0;
 
-        while(item.compareTo(db.get(i)) < 0 && i < db.size()) {
+        while(i < db.size() && item.compareTo(db.get(i)) < 0) {
             i++;
         }
 
@@ -78,7 +78,7 @@ public class Storage {
         Item item;
 
         while(db.size() > 0) {
-            item = db.get(0); // we exploit the fact that elements are sorted in crescent order
+            item = db.get(0); // we exploit the fact that elements are sorted in crescent order to improve performance
 
             if(item.getKey() < key) { //TODO choose if less / less or equal
                 db.remove(item);
@@ -93,13 +93,14 @@ public class Storage {
      * saves the storage on a local text file
      */
     private void save() {
-        try {
+        //TODO
+        /*try {
             FileWriter out = new FileWriter(pathname);
             out.write(this.toString());
             out.close();
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        }*/
     }
 
     /**
