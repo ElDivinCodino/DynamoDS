@@ -20,8 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
 
-//    LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
-    DynamoLogger nodeActorLogger = new DynamoLogger();
+    LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
+//    DynamoLogger nodeActorLogger = new DynamoLogger();
 
     // For know we hard code these values
     // Think about maybe reading them form the config at
@@ -80,7 +80,7 @@ public class NodeActor extends UntypedActor{
         // initialize local storage
         this.storage = new Storage();
 
-        this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.DEBUG);
+        //this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.DEBUG);
     }
 
     /**
@@ -126,6 +126,7 @@ public class NodeActor extends UntypedActor{
         nodeActorLogger.debug("handleClientReadRequest: itemKey {}", itemKey);
         OperationMessage readRequest = new OperationMessage(false, true, true, itemKey, null);
         // send a retrieve message to each one of the replicas (check if one of these is SELF)
+        waitingQuorum = true;
         sendMessageToReplicas(readRequest, itemKey);
     }
 
@@ -136,7 +137,6 @@ public class NodeActor extends UntypedActor{
      */
     private Item getLatestVersionItemFromResponses() {
         nodeActorLogger.debug("getLatestVersionItemFromResponses");
-        int v = 0;
         OperationMessage max = readResponseMessages.get(0);
         for (OperationMessage msg : readResponseMessages){
             if (msg.getVersion() > max.getVersion()){
@@ -465,7 +465,7 @@ public class NodeActor extends UntypedActor{
                          to have at least R replies before sending the response back to
                          the client
                         */
-                        if (true){
+                        if (waitingQuorum){
                             // in case the node did not have the requested item, it means that we have to insert it
                             // HERE WE ARE ASSUMING THAT IF AT LEAST ONE NODE DOES NOT HAVE THE ITEM,
                             // THEN ALSO ALL THE OTHER REPLICAS DON'T AS WELL
