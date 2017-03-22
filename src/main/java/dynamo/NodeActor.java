@@ -5,10 +5,7 @@ import akka.actor.Cancellable;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import dynamo.messages.*;
-import dynamo.nodeutilities.Item;
-import dynamo.nodeutilities.Peer;
-import dynamo.nodeutilities.Ring;
-import dynamo.nodeutilities.Storage;
+import dynamo.nodeutilities.*;
 import akka.actor.ActorSelection;
 import akka.actor.UntypedActor;
 import akka.pattern.Patterns;
@@ -23,7 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
 
-    LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
+//    LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
+    DynamoLogger nodeActorLogger = new DynamoLogger();
 
     // For know we hard code these values
     // Think about maybe reading them form the config at
@@ -81,6 +79,8 @@ public class NodeActor extends UntypedActor{
 
         // initialize local storage
         this.storage = new Storage();
+
+        this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.DEBUG);
     }
 
     /**
