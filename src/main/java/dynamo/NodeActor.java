@@ -297,6 +297,16 @@ public class NodeActor extends UntypedActor{
         this.broadcastToPeers(message, logMessage);
     }
 
+    private void resetVariables() {
+        // stop the quorum operation
+        this.quorum = 0;
+        this.quorumThreshold = 0;
+        this.waitingQuorum = false;
+        this.readResponseMessages.clear();
+        this.clientReferenceRequest = null;
+        this.newValue = null;
+    }
+
     /**
      * Schedule a TimeoutMessage to self after
      * @param time How many time units to wait
@@ -393,6 +403,9 @@ public class NodeActor extends UntypedActor{
                 }
                 break;
             case "OperationMessage":
+                if (this.N > this.ring.getNumberOfPeers()){
+                    throw new Exception("N is greater than the number of active nodes.");
+                }
                 // TODO: Check that we do not receive a read/write request while we are handling already another operation
                 OperationMessage opMessage = (OperationMessage) message;
                 if (opMessage.isClient()){
@@ -427,10 +440,12 @@ public class NodeActor extends UntypedActor{
                             // version number. In this way the coordinator can issue an update
                             // to all replicas with version number 1 and the item will be created.
                             if (item == null) {
+                                nodeActorLogger.debug("Respond with item=null");
                                 getSender().tell(new OperationMessage(false, false,
-                                        true, opMessage.getKey(), opMessage.getValue(), null),
+                                        true, opMessage.getKey(), null, null),
                                         getSelf());
                             } else {
+                                nodeActorLogger.debug("Respond with {}", item.toString());
                                 getSender().tell(new OperationMessage(false, false,
                                         true, item.getKey(), item.getValue(), item.getVersion()),
                                         getSelf());
@@ -450,48 +465,42 @@ public class NodeActor extends UntypedActor{
                          to have at least R replies before sending the response back to
                          the client
                         */
+                        if (waitingQuorum){
+                            // in case the node did not have the requested item, it means that we have to insert it
+                            // HERE WE ARE ASSUMING THAT IF AT LEAST ONE NODE DOES NOT HAVE THE ITEM,
+                            // THEN ALSO ALL THE OTHER REPLICAS DON'T AS WELL
+                            if (((OperationMessage) message).getVersion() == null && !this.readOperation){
+                                // TODO: check the logic of this, is it ok done in this way?
 
-                        // in case the node did not have the requested item, it means that we have to insert it
-                        // TODO: also we have to check that we have requested a write in some way (maybe use the value field and check it is not null?)
-                        if (((OperationMessage) message).getVersion() == null && !this.readOperation){
-                            // TODO: check the logic of this, is it ok done in this way?
-                            // stop the quorum operation
-                            this.quorum = 0;
-                            this.quorumThreshold = 0;
-                            this.waitingQuorum = false;
-                            this.readResponseMessages.clear();
-                            this.clientReferenceRequest = null;
-
-                            Item newItem = new Item(((OperationMessage) message).getKey(),
-                                    ((OperationMessage) message).getValue(), 1);
-                            // send to replicas the new element.
-                            this.issueUpdateToReplicas(newItem);
-
-
-                        } else if (waitingQuorum){
-                            this.quorum++;
-                            this.readResponseMessages.add((OperationMessage) message);
-                            /*
-                             if we have reached the read quorum, send response
-                             to client and reset variables. Here clearly we assume that
-                             a Node can handle just one read request from a client at a time.
-                            */
-                            if (quorum.equals(this.quorumThreshold)){
-                                if (this.readOperation){
-                                    // respond to the client with the proper item
-                                    this.handleReadResponseToClient();
-                                } else{
-                                    // report success to client and send the correct update to the replicas
-                                    this.issueUpdateToReplicas(null);
+                                Item newItem = new Item(((OperationMessage) message).getKey(),
+                                        null, 0); // the version will become 1 before sending to replicas
+                                // send to replicas the new element.
+                                this.issueUpdateToReplicas(newItem);
+                                resetVariables();
+                                this.scheduledTimeoutMessageCancellable.cancel();
+                            }else {
+                                this.quorum++;
+                                this.readResponseMessages.add((OperationMessage) message);
+                                /*
+                                 if we have reached the read quorum, send response
+                                 to client and reset variables. Here clearly we assume that
+                                 a Node can handle just one read request from a client at a time.
+                                */
+                                if (quorum.equals(this.quorumThreshold)){
+                                    if (this.readOperation){
+                                        // respond to the client with the proper item
+                                        this.handleReadResponseToClient();
+                                    } else{
+                                        // report success to client and send the correct update to the replicas
+                                        this.issueUpdateToReplicas(null);
+                                    }
+                                    resetVariables();
+                                    this.scheduledTimeoutMessageCancellable.cancel();
                                 }
-                                this.quorum = 0;
-                                this.quorumThreshold = 0;
-                                this.waitingQuorum = false;
-                                this.readResponseMessages.clear();
-                                this.clientReferenceRequest = null;
                             }
                         }else {
                             // do nothing for now. Wait for other responses.
+                            nodeActorLogger.debug("Received an {} with waitingQuorum=false. Message Ignored.", opMessage.toString());
                         }
                     }
                 }
@@ -500,7 +509,7 @@ public class NodeActor extends UntypedActor{
                 // if we are still waiting for some nodes to respond but too much time has passed
                 if (waitingQuorum) {
                     // delete the upcoming scheduled Timeout
-                    this.scheduledTimeoutMessageCancellable.cancel();
+                    this.scheduledTimeoutMessageCancellable = null;
                     OperationMessage clientResponse = new OperationMessage(
                             false,
                             false,
@@ -515,10 +524,8 @@ public class NodeActor extends UntypedActor{
                     this.readResponseMessages.clear();
                     this.clientReferenceRequest = null;
                 }else {
-                    // we have completed all operation in time, do nothing.
-                    // Cannot happen because we removed the scheduled timeout when the
-                    // read/write operation was completed
-                    assert false;
+                    // TODO: send back failure to client?
+                    throw new Exception("Timeout, operation took too long");
                 }
                 break;
             default:
