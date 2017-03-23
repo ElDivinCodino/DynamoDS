@@ -38,10 +38,9 @@ public class Storage {
         }
 
         //if already existing, update
-        if(item.getKey() == key) {
-            item.setKey(key);
-            item.setValue(value);
-            item.setVersion(version);
+        if(db.size() > 0 && db.get(i).getKey() == key) {
+            db.get(i).setValue(value);
+            db.get(i).setVersion(version);
             save();
             return;
         } else {

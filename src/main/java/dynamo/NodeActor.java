@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
 
-//    LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
+//  LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
     DynamoLogger nodeActorLogger = new DynamoLogger();
 
     // For know we hard code these values

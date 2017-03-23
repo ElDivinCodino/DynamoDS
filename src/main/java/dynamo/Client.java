@@ -115,12 +115,12 @@ public class Client {
                     OperationMessage msg = (OperationMessage) result;
                     if(msg.isRead()) {
                         System.out.println("Node returned item with "
-                                + "\n\tkey: " + msg.getValue()
+                                + "\n\tkey: " + msg.getKey()
                                 + "\n\tvalue: " + msg.getValue()
                                 + "\n\tversion: " + msg.getVersion());
                     } else {
                         System.out.println("Node updated successfully with "
-                                + "\n\tkey: " + msg.getValue()
+                                + "\n\tkey: " + msg.getKey()
                                 + "\n\tvalue: " + msg.getValue()
                                 + "\n\tversion: " + msg.getVersion());
                     }
