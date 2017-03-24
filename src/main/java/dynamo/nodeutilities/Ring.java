@@ -129,6 +129,30 @@ public class Ring {
         return amNext;
     }
 
+    /**
+     * Checks if, after another Node leaves the Ring, this Node is now responsible for one of its Items
+     *
+     * @param item the Item to be checked
+     * @return true if this node is now responsible for the considered Item, false otherwise
+     */
+    public boolean amIResponsible(Item item, Integer N, Integer startingKey, Integer selfKey) {
+        int counter = 0;
+        Integer currentPeer = this.previous(startingKey);
+
+        for(int i = 0; i < N; i++) {
+            if(/*currentPeer contains item*/) {
+                counter++;
+            } else {
+                break; // performance reasons
+            }
+            if(/*i am within the N-counter nodes*/) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+
     public TreeMap<Integer, Peer> getPeers() {
         return peers;
     }

@@ -136,7 +136,7 @@ public class Storage {
      * This method deletes, after a Node joining or leaving the system, the Items the Storage is not anymore responsible for
      * @param receivedList the list of Items the Storage is not anymore responsible for
      */
-    public void looseResponsabilityOf(ArrayList<Item> receivedList) {
+    public void looseResponsibilityOf(ArrayList<Item> receivedList) {
         db.removeAll(receivedList);
         save();
     }
@@ -145,7 +145,7 @@ public class Storage {
      * This method adds, after a Node joining or leaving the system, the Items the Storage is now responsible for
      * @param receivedList the list of Items the Storage is not anymore responsible for
      */
-    public void acquireResponsabilityOf(ArrayList<Item> receivedList) {
+    public void acquireResponsibilityOf(ArrayList<Item> receivedList) {
         db.addAll(receivedList);
         save();
     }

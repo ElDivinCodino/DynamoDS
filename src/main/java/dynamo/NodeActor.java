@@ -378,9 +378,15 @@ public class NodeActor extends UntypedActor{
 
                 nodeActorLogger.info(this.ring.toString());
 
-                if (ring.selfIsNextNClockwise(senderKey, this.N, this.idKey)){
-                    // TODO: assume control of the relevant data (to be implemented in Storage class)
+                for(Item item: senderStorage) {
+                    boolean responsibleForIt = ring.amIResponsible(item, this.N, senderKey, this.idKey);
+                    if (responsibleForIt) {
+                        storage.update(item.getKey(), item.getValue(), item.getVersion());
+                    }
                 }
+                /*if (ring.selfIsNextNClockwise(senderKey, this.N, this.idKey)){
+                    // TODO: assume control of the relevant data (to be implemented in Storage class)
+                }*/
                 break;
             case "PeersListMessage":
                 System.out.println("peer list entrato");
@@ -397,9 +403,9 @@ public class NodeActor extends UntypedActor{
                     RequestInitItemsMessage response = new RequestInitItemsMessage(false, receivedList);
                     getSender().tell(response, getSelf());
                     //remove them from my Storage: I'm not anymore responsible for them!
-                    storage.looseResponsabilityOf(receivedList);
+                    storage.looseResponsibilityOf(receivedList);
                 } else {
-                    storage.acquireResponsabilityOf(msg.getItems());
+                    storage.acquireResponsibilityOf(msg.getItems());
                 }
                 break;
             case "OperationMessage":
