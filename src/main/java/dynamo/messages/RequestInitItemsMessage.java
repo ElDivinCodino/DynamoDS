@@ -12,13 +12,10 @@ public class RequestInitItemsMessage implements Serializable {
     private boolean request = false;
     ArrayList<Item> items = null;
     private Integer senderKey = null;
-    private String senderRemotePath = null;
 
-    public RequestInitItemsMessage(boolean request, Integer senderKey, String senderRemotePath, ArrayList<Item> items) {
+    public RequestInitItemsMessage(boolean request, Integer senderKey) {
         this.request = request;
         this.senderKey = senderKey;
-        this.senderRemotePath = senderRemotePath;
-        this.items = items;
     }
 
     public RequestInitItemsMessage(boolean request, ArrayList<Item> items) {
@@ -38,17 +35,12 @@ public class RequestInitItemsMessage implements Serializable {
         return senderKey;
     }
 
-    public String getSenderRemotePath() {
-        return senderRemotePath;
-    }
-
     @Override
     public String toString() {
         return "RequestInitItemsMessage{" +
                 "request=" + request +
                 ", items=" + items +
                 ", senderKey=" + senderKey +
-                ", senderRemotePath='" + senderRemotePath + '\'' +
                 '}';
     }
 }

@@ -2,6 +2,7 @@ package dynamo.nodeutilities;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.*;
 
 /**
@@ -19,6 +20,12 @@ public class Storage {
 
     public Storage(ArrayList<Item> db) {
         this.db = db;
+    }
+
+    public void initializeStorage(ArrayList<Item> initItems){
+        for (Item item : initItems){
+            this.update(item.getKey(), item.getValue(), item.getVersion());
+        }
     }
 
     /**
@@ -89,6 +96,20 @@ public class Storage {
     }
 
     /**
+     * This method iterates over every item in the storage and
+     * checks if the local node is not among the N replicas of
+     * a given item anymore
+     */
+    public void removeItemsOutOfResponsibility(Integer localNodeKey, Ring localNodeRing, Integer N){
+        for (Item item : this.db){
+            // if the node has not responsibility of this item
+            if (!localNodeRing.isNodeWithinRangeFromItem(item.getKey(), localNodeKey, N)){
+                this.delete(item.getKey());
+            }
+        }
+    }
+
+    /**
      * saves the storage on a local text file
      */
     private void save() {
@@ -133,6 +154,25 @@ public class Storage {
     }
 
     /**
+     * Gets all the items excepts the ones with key that is inside
+     * the given range, with 'to' excluded.
+     * @param from
+     * @param to
+     * @return
+     */
+    public ArrayList<Item> getItemsForNewNode(Integer from, Integer to){
+        ArrayList<Item> list = new ArrayList<>();
+        for(int i = 0; i < db.size(); i++) {
+            Item item = db.get(i);
+
+            if(item.getKey() <= from && item.getKey() > to) {
+                list.add(item);
+            }
+        }
+        return list;
+    }
+
+    /**
      * This method deletes, after a Node joining or leaving the system, the Items the Storage is not anymore responsible for
      * @param receivedList the list of Items the Storage is not anymore responsible for
      */
@@ -156,6 +196,7 @@ public class Storage {
     public ArrayList<Item> getStorage() {
         return db;
     }
+
 
     /**
      * recovers after a crash

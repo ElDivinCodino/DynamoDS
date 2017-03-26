@@ -241,38 +241,38 @@ public class NodeActor extends UntypedActor{
         nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
     }
 
-    /**
-     * Request to the next node in the network the data items
-     * that need to pass to our competence. This method is blocking, which means
-     * that the actor waits for the reply from the remote actor. This is possible
-     * because no other node in the network knows of the existence of this node yet.
-     * So it is not possible to receive other messages while we are waiting for
-     * this reply.
-     * @throws Exception
-     */
-    private void requestItemsToNextNode() throws Exception {
-        //first get the next node
-        String remotePathNext = ring.getNextPeer(this.idKey).getRemotePath();
-        final Timeout timeout = new Timeout(Duration.create(5, "seconds"));
-        ActorSelection remoteActor = getContext().actorSelection(remotePathNext);
-        final Future<Object> future = Patterns.ask(remoteActor,
-                new RequestInitItemsMessage(true, this.idKey, this.remotePath, storage.getStorage()), timeout);
-
-        nodeActorLogger.debug("requestItemsToNextNode: waiting for next actor (key {}) to respond",
-                this.ring.getNextPeer(this.idKey));
-
-        // wait for an acknowledgement
-        final Object message = Await.result(future, timeout.duration());
-        assert message instanceof RequestInitItemsMessage;
-
-        // (FRA) ALL THIS IMPLEMENTED IN onReceive METHOD
-        //RequestInitItemsMessage msg = (RequestInitItemsMessage) message;
-        //assert !msg.isRequest();
-
-        //// now instantiate local storage with received data
-        //this.storage = new Storage(msg.getItems());
-        //nodeActorLogger.debug("{}requestItemsToNextNode: initialized storage with new items", LOG_PREFIX);
-    }
+//    /**
+//     * Request to the next node in the network the data items
+//     * that need to pass to our competence. This method is blocking, which means
+//     * that the actor waits for the reply from the remote actor. This is possible
+//     * because no other node in the network knows of the existence of this node yet.
+//     * So it is not possible to receive other messages while we are waiting for
+//     * this reply.
+//     * @throws Exception
+//     */
+//    private void requestItemsToNextNode() throws Exception {
+//        //first get the next node
+//        String remotePathNext = ring.getNextPeer(this.idKey).getRemotePath();
+//        final Timeout timeout = new Timeout(Duration.create(5, "seconds"));
+//        ActorSelection remoteActor = getContext().actorSelection(remotePathNext);
+//        final Future<Object> future = Patterns.ask(remoteActor,
+//                new RequestInitItemsMessage(true, this.idKey, this.remotePath, storage.getStorage()), timeout);
+//
+//        nodeActorLogger.debug("requestItemsToNextNode: waiting for next actor (key {}) to respond",
+//                this.ring.getNextPeer(this.idKey));
+//
+//        // wait for an acknowledgement
+//        final Object message = Await.result(future, timeout.duration());
+//        assert message instanceof RequestInitItemsMessage;
+//
+//        // (FRA) ALL THIS IMPLEMENTED IN onReceive METHOD
+//        //RequestInitItemsMessage msg = (RequestInitItemsMessage) message;
+//        //assert !msg.isRequest();
+//
+//        //// now instantiate local storage with received data
+//        //this.storage = new Storage(msg.getItems());
+//        //nodeActorLogger.debug("{}requestItemsToNextNode: initialized storage with new items", LOG_PREFIX);
+//    }
 
     /**
      * Send a message to everyone in the network (except to self)
@@ -332,9 +332,10 @@ public class NodeActor extends UntypedActor{
                 requestPeersToRemote(remotePath);
                 // Here we request the items we are responsible for to the
                 // next node in the ring
-//                requestItemsToNextNode();
-                // Here we announce our presence to the whole system
-                announceSelfToSystem();
+                this.ring.getNextPeer(this.idKey).getRemoteSelection().tell(
+                        new RequestInitItemsMessage(true, this.idKey),
+                        getSelf()
+                );
                 break;
             case "HelloMatesMessage":
                 // Here the nodes registers the info about the new peer and
@@ -347,10 +348,10 @@ public class NodeActor extends UntypedActor{
                 nodeActorLogger.info("Added {} to local ring", peer.toString());
                 // Print current state of ring
                 nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
-                // TODO: delete from storage unnecessary items, we have to delete all item with key SMALLER than the remoteKey (smaller or equal?)
-                // TODO: Useful API in Storage to delete all items smaller that a certain key
-                // (FRA)
-                // CREATO IL METODO DELETEUPTO, LEGGERE IL TODO PRESENTE Lì
+
+                if (this.ring.getNumberOfPeers() > this.N){
+                    this.storage.removeItemsOutOfResponsibility(this.idKey, this.ring, this.N);
+                }
                 break;
             case "LeaveMessage":
                 // send message to everyone that we are leaving. Send also local storage alongside
@@ -378,15 +379,36 @@ public class NodeActor extends UntypedActor{
 
                 nodeActorLogger.info(this.ring.toString());
 
-                for(Item item: senderStorage) {
-                    boolean responsibleForIt = ring.amIResponsible(item, this.N, senderKey, this.idKey);
-                    if (responsibleForIt) {
-                        storage.update(item.getKey(), item.getValue(), item.getVersion());
+                /*
+                Just the next N clockwise peers should check for the incoming storage
+                Indeed all the others do not care about the storage of this leaving node.
+                Moreover, if we have less/equal than N (before removing the leaving peer -
+                that's why we use > N - 1) nodes in the system we just skip all this
+                 */
+                if (this.ring.getNumberOfPeers() > N - 1  &&
+                        this.ring.selfIsNextNClockwise(senderKey, this.N, this.idKey)){
+                    for(Item item: senderStorage) {
+                        // TODO: look at this comment
+                        /*
+                        If a node is the Nth clockwise node from the leaving one, then it will
+                        insert a new item in its storage, fine. In the case this node is 'nearer'
+                        to the leaving one, then it will update its current item in case the leaving node
+                        has one with a newer version number. This thing was not required in the assignment
+                        but it comes easy with our code and indeed it seem a reasonable thing to do.
+                         */
+                        /*
+                        One more thing: currently we are broadcasting this ByeMatesMessage to ALL nodes in the
+                        system, attaching the local storage of the leaving node. The really correct way of doing it
+                        would be to send a simple ByeMates message to everyone, AND another one WITH the local storage
+                        JUST to the N clockwise nodes from the leaving one. For now I think it's ok to do it like this
+                        (since we have the first if(this.ring.selfIsNextNClockwise(...)), but we can consider
+                        doing it the correct way (so we should create another message, like ByeMatesItemsMessage).
+                         */
+                        if(this.ring.isNodeWithinRangeFromItem(item.getKey(), this.idKey, this.N)){
+                            storage.update(item.getKey(), item.getValue(), item.getVersion());
+                        }
                     }
                 }
-                /*if (ring.selfIsNextNClockwise(senderKey, this.N, this.idKey)){
-                    // TODO: assume control of the relevant data (to be implemented in Storage class)
-                }*/
                 break;
             case "PeersListMessage":
                 System.out.println("peer list entrato");
@@ -396,17 +418,56 @@ public class NodeActor extends UntypedActor{
             case "RequestInitItemsMessage":
                 RequestInitItemsMessage msg = ((RequestInitItemsMessage)message);
 
-                if(msg.isRequest()) {
-                    // receivedList contains all the Items in this node and not contained in the next one (so the Items I am the last responsible for)
-                    ArrayList<Item> receivedList = storage.retrieveAll(msg.getItems());
-                    // send Items collection to the new Peer
-                    RequestInitItemsMessage response = new RequestInitItemsMessage(false, receivedList);
+                if (msg.isRequest()){
+                    /*
+                    Here a new node is requesting the items it is responsible for.
+                    In case the number of nodes is less (not equal, because with the new one
+                     we have N + 1 node) than N, then the new node will need ALL the local items.
+                    In case there are already >= N nodes, then the new one will need all the nodes
+                    this one stores, EXCEPT the items with key GREATER than the new node's key and
+                    LESS OR EQUAL than the current node. This is because this node has to loose management
+                    of the 'local' items with key less than the new node and it has also to pass ALL the replicas
+                    it contains from the other Peers. Indeed, if this node has a replica, then it is obvious
+                    that the previous node will have that replica too.
+                     */
+                    ArrayList<Item> responseItems;
+                    if (this.ring.getNumberOfPeers() < N) {
+                         responseItems = this.storage.getStorage();
+                    } else {
+                        /*
+                        Here we need to get all the items of this node EXCEPT the ones with key in range
+                        between the new node's key and the current node key.
+                         */
+                        responseItems = this.storage.getItemsForNewNode(msg.getSenderKey(), this.idKey);
+                    }
+                    RequestInitItemsMessage response = new RequestInitItemsMessage(false, responseItems);
                     getSender().tell(response, getSelf());
-                    //remove them from my Storage: I'm not anymore responsible for them!
-                    storage.looseResponsibilityOf(receivedList);
-                } else {
-                    storage.acquireResponsibilityOf(msg.getItems());
+
+                    // When the new node will receive its data, it will announce itself to the system
+                    // At that time every other node will check what item should be deleted from the storage.
+                    // So for now this node does not do anything on its storage yet, it will once the new node
+                    // officially announces itself to the system.
+
+                } else { // isResponse (from the next clockwise node)
+                    // Here we receive the data sent from the next node, this is all the data present in the system
+                    // that we are responsible for.
+                    this.storage.initializeStorage(((RequestInitItemsMessage) message).getItems());
+
+                    // Now that we have initialized the storage, we can announce this new node to the system
+                    announceSelfToSystem();
                 }
+
+//                if(msg.isRequest()) {
+//                    // receivedList contains all the Items in this node and not contained in the next one (so the Items I am the last responsible for)
+//                    ArrayList<Item> receivedList = storage.retrieveAll(msg.getItems());
+//                    // send Items collection to the new Peer
+//                    RequestInitItemsMessage response = new RequestInitItemsMessage(false, receivedList);
+//                    getSender().tell(response, getSelf());
+//                    //remove them from my Storage: I'm not anymore responsible for them!
+//                    storage.looseResponsibilityOf(receivedList);
+//                } else {
+//                    storage.acquireResponsibilityOf(msg.getItems());
+//                }
                 break;
             case "OperationMessage":
                 if (this.N > this.ring.getNumberOfPeers()){
