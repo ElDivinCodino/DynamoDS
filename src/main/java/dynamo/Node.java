@@ -71,7 +71,7 @@ public class Node {
                 throw new IllegalArgumentException("R + W is less than N.");
             }
 
-            // Can extend here the crete call with arguments to the
+            // Can extend here the create call with arguments to the
             // constructor of the dynamo.Node class
             localNode = system.actorOf(Props.create(NodeActor.class, localId, n, r, w), "node");
             System.out.println("Node started and waiting for messages (id : " + localId + ")");
@@ -86,7 +86,7 @@ public class Node {
             throw new IllegalArgumentException("Not yet implemented.");
             // TODO
         }else{
-            // throw new IllegalArgumentException("Argument not recognized.");
+        //     throw new IllegalArgumentException("Argument not recognized.");
         }
     }
 }

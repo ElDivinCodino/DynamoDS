@@ -12,15 +12,19 @@ public class Ring {
 
     public Ring(){ }
 
+    //TODO put the javadoc
     public boolean addPeer(Peer peer){
         if (!peers.containsKey(peer.getKey())) {
             peers.put(peer.getKey(), peer);
             return true;
         }
         // TODO: throw an exception in case a key already exists. to do it here or in the main Node class.
+        // (FRA) Maybe doesn't have to be treated as an exception... think if a node joins while this one is recovering
         return false;
     }
 
+    //TODO put the javadoc
+    // (FRA) ha senso che restituisca un booleano?
     public boolean addPeers(TreeMap<Integer, Peer> peers){
         for (Map.Entry<Integer, Peer> entry : peers.entrySet()){
             if (!this.addPeer(entry.getValue()))
@@ -33,6 +37,7 @@ public class Ring {
         return this.removePeer(peer.getKey());
     }
 
+    //TODO put the javadoc
     public boolean removePeer(Integer key){
         if (peers.containsKey(key)){
             peers.remove(key);
@@ -41,6 +46,7 @@ public class Ring {
         return false;
     }
 
+    //TODO put the javadoc
     public Integer nextEqual(Integer key){
         // gets the least equal or greater key
         Integer lowest = peers.ceilingKey(key);
@@ -53,6 +59,7 @@ public class Ring {
         return lowest;
     }
 
+    //TODO put the javadoc
     public Integer next(Integer key){
         Integer next = peers.higherKey(key);
         if (next == null){
@@ -69,14 +76,17 @@ public class Ring {
         return previous;
     }
 
+    //TODO put the javadoc
     public Peer getPeer(Integer key){
         return peers.get(key);
     }
 
+    //TODO put the javadoc
     public Peer getNextPeer(Integer key){
         return this.getPeer(this.next(key));
     }
 
+    //TODO put the javadoc
     public Integer getNumberOfPeers(){
         return this.peers.size();
     }
@@ -175,6 +185,7 @@ public class Ring {
 //        }
     }
 
+    //TODO put the javadoc
     public TreeMap<Integer, Peer> getPeers() {
         return peers;
     }

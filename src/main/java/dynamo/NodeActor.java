@@ -20,8 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
 
-//  LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
-    DynamoLogger nodeActorLogger = new DynamoLogger();
+  LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
+//    DynamoLogger nodeActorLogger = new DynamoLogger();
 
     // For know we hard code these values
     // Think about maybe reading them form the config at
@@ -80,7 +80,7 @@ public class NodeActor extends UntypedActor{
         // initialize local storage
         this.storage = new Storage();
 
-        this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.DEBUG);
+   //     this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.DEBUG);
     }
 
     /**
@@ -385,7 +385,7 @@ public class NodeActor extends UntypedActor{
                 Moreover, if we have less/equal than N (before removing the leaving peer -
                 that's why we use > N - 1) nodes in the system we just skip all this
                  */
-                if (this.ring.getNumberOfPeers() > N - 1  &&
+                if (this.ring.getNumberOfPeers() > (N - 1)  &&
                         this.ring.selfIsNextNClockwise(senderKey, this.N, this.idKey)){
                     for(Item item: senderStorage) {
                         // TODO: look at this comment
@@ -452,6 +452,7 @@ public class NodeActor extends UntypedActor{
                     // Here we receive the data sent from the next node, this is all the data present in the system
                     // that we are responsible for.
                     this.storage.initializeStorage(((RequestInitItemsMessage) message).getItems());
+                    nodeActorLogger.info(this.storage.toString());
 
                     // Now that we have initialized the storage, we can announce this new node to the system
                     announceSelfToSystem();

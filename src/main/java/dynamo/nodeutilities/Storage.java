@@ -45,15 +45,16 @@ public class Storage {
         }
 
         //if already existing, update
-        if(db.size() > 0 && db.get(i).getKey() == key) {
+        if(db.size() > i && db.get(i).getKey() == key) {
             db.get(i).setValue(value);
             db.get(i).setVersion(version);
             save();
             return;
         } else {
-            //else, add, shifting all the others on the right, if any is present after
+            //else, add, shifting possibly all the others on the right, if any is present after
             db.add(i, item);
         }
+        save();
     }
 
     /**
@@ -100,13 +101,18 @@ public class Storage {
      * checks if the local node is not among the N replicas of
      * a given item anymore
      */
+    //TODO improve the JavaDoc
     public void removeItemsOutOfResponsibility(Integer localNodeKey, Ring localNodeRing, Integer N){
+        ArrayList<Item> valuesToBeRemoved = new ArrayList<>(); // to avoid java.util.ConcurrentModificationException
+
         for (Item item : this.db){
             // if the node has not responsibility of this item
             if (!localNodeRing.isNodeWithinRangeFromItem(item.getKey(), localNodeKey, N)){
-                this.delete(item.getKey());
+                valuesToBeRemoved.add(item);
             }
         }
+        db.removeAll(valuesToBeRemoved);
+        save();
     }
 
     /**
@@ -158,14 +164,14 @@ public class Storage {
      * the given range, with 'to' excluded.
      * @param from
      * @param to
-     * @return
+     * @return the list of the Items the requesting node is responsible for
      */
     public ArrayList<Item> getItemsForNewNode(Integer from, Integer to){
         ArrayList<Item> list = new ArrayList<>();
         for(int i = 0; i < db.size(); i++) {
             Item item = db.get(i);
 
-            if(item.getKey() <= from && item.getKey() > to) {
+            if(item.getKey() <= from || item.getKey() > to) {
                 list.add(item);
             }
         }

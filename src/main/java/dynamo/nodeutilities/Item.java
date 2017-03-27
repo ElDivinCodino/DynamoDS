@@ -1,9 +1,11 @@
 package dynamo.nodeutilities;
 
+import java.io.Serializable;
+
 /**
  * Class which represents  basic item we want to store and manage
  */
-public class Item implements Comparable<Item>{
+public class Item implements Comparable<Item>, Serializable{
 
     private int key;
     private String value;
