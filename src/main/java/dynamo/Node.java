@@ -9,6 +9,8 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import dynamo.messages.StartJoinMessage;
 
+import java.net.InetAddress;
+
 /**
  * Created by StefanoFioravanzo on 15/03/2017.
  */
@@ -18,6 +20,15 @@ public class Node {
         String remoteIp = null;
         String remotePort = null;
         Integer localId = null;
+
+        String localIP = null;
+
+        try {
+            localIP = InetAddress.getLocalHost().getHostAddress().toString();
+            System.out.println(localIP);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         // First we parse the arguments given from CLI
         // If JOIN we have to create a new actor and contact
@@ -56,7 +67,7 @@ public class Node {
             }
 
             Config myConfig = ConfigFactory.load("application");
-            Config custom = ConfigFactory.parseString("akka.remote.netty.tcp.hostname = localhost, akka.remote.netty.tcp.port = " + (10000 + localId));
+            Config custom = ConfigFactory.parseString("akka.remote.netty.tcp.hostname =" + localIP + ", akka.remote.netty.tcp.port = " + (10000 + localId));
 
             ActorSystem system = ActorSystem.create("dynamo", custom.withFallback(myConfig));
             ActorRef localNode = null;
