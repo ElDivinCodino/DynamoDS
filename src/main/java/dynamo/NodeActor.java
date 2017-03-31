@@ -20,8 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
 
-  LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
-//    DynamoLogger nodeActorLogger = new DynamoLogger();
+//  LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
+    DynamoLogger nodeActorLogger = new DynamoLogger();
 
     // For know we hard code these values
     // Think about maybe reading them form the config at
@@ -40,7 +40,7 @@ public class NodeActor extends UntypedActor{
 
     // Where all the data items are stored.
     private Storage storage = null;
-
+    private String storagePath;
     /*
     Handy variable when we are dealing with a read/write request
     from the client.
@@ -63,12 +63,13 @@ public class NodeActor extends UntypedActor{
     // A cancellable returned from the scheduler which lets us cancel the scheduled message
     private Cancellable scheduledTimeoutMessageCancellable;
 
-    public NodeActor(Integer id, Integer n, Integer r, Integer w) {
+    public NodeActor(Integer id, Integer n, Integer r, Integer w, String storagePath) {
         this.idKey = id;
         this.N = n;
         this.R = r;
         this.W = w;
         this.Q = Math.max(this.R, this.W);
+        this.storagePath = storagePath;
 
         assert W + R > N;
 
@@ -77,10 +78,7 @@ public class NodeActor extends UntypedActor{
         // add self to the ring
         ring.addPeer(new Peer(this.remotePath, context().actorSelection(self().path()),  this.idKey));
 
-        // initialize local storage
-        this.storage = new Storage();
-
-   //     this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.DEBUG);
+        this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.INFO);
     }
 
     /**
@@ -217,7 +215,7 @@ public class NodeActor extends UntypedActor{
         final Timeout timeout = new Timeout(Duration.create(5, "seconds"));
         ActorSelection remoteActor = getContext().actorSelection(remotePath);
         final Future<Object> future = Patterns.ask(remoteActor,
-                new PeersListMessage(true), timeout);
+                new PeersListMessage(true, this.ring.getPeers()), timeout);
 
         nodeActorLogger.debug("requestPeersToRemote: waiting for response from {}", remotePath);
 
@@ -230,9 +228,13 @@ public class NodeActor extends UntypedActor{
 
         // the message returns a list of remotePaths and ids
         // from this we get the Remote reference to the actor
-
-        // Add to the ring the peers
-        ring.addPeers(msg.getPeers());
+        // or null if a request with an already existing key is sent
+        if (msg.getPeers() == null) {
+            throw new Exception("Node key already exists");
+        } else {
+            // Add to the ring the peers
+            ring.addPeers(msg.getPeers());
+        }
 
         nodeActorLogger.info("requestPeersToRemote: initialized Ring with {} peers",
                 this.ring.getNumberOfPeers());
@@ -326,16 +328,25 @@ public class NodeActor extends UntypedActor{
         // class name is represented as dynamo.messages.className, so split and take last element.
         switch (message.getClass().getName().split("[.]")[2]) {
             case "StartJoinMessage": // from actor system, request to join network
-                String remotePath = "akka.tcp://dynamo@"+
-                        ((StartJoinMessage) message).getRemoteIp() + ":" +
-                        ((StartJoinMessage) message).getRemotePort() + "/user/node";
-                requestPeersToRemote(remotePath);
-                // Here we request the items we are responsible for to the
-                // next node in the ring
-                this.ring.getNextPeer(this.idKey).getRemoteSelection().tell(
-                        new RequestInitItemsMessage(true, this.idKey),
-                        getSelf()
-                );
+                // if Node is the first one, just initialize the storage
+                if(((StartJoinMessage) message).getRemoteIp() == null) {
+                    storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".txt";
+                    // initialize local storage
+                    this.storage = new Storage(this.storagePath);
+                } else {
+                    // otherwise, ask for peers
+                    String remotePath = "akka.tcp://dynamo@"+
+                            ((StartJoinMessage) message).getRemoteIp() + ":" +
+                            ((StartJoinMessage) message).getRemotePort() + "/user/node";
+                    requestPeersToRemote(remotePath);
+                    // Here we request the items we are responsible for to the
+                    // next node in the ring
+                    this.ring.getNextPeer(this.idKey).getRemoteSelection().tell(
+                            new RequestInitItemsMessage(true, this.idKey),
+                            getSelf()
+                    );
+                }
+
                 break;
             case "HelloMatesMessage":
                 // Here the nodes registers the info about the new peer and
@@ -412,7 +423,13 @@ public class NodeActor extends UntypedActor{
                 break;
             case "PeersListMessage":
                 System.out.println("peer list entrato");
-                PeersListMessage reply = new PeersListMessage(false, ring.getPeers());
+                PeersListMessage request = ((PeersListMessage)message);
+                PeersListMessage reply;
+                if (ring.getPeers().containsKey(request.getPeers().firstEntry().getKey())) {
+                    reply = new PeersListMessage(false, null);
+                } else {
+                    reply = new PeersListMessage(false, ring.getPeers());
+                }
                 getSender().tell(reply, getSelf());
                 break;
             case "RequestInitItemsMessage":
@@ -449,6 +466,9 @@ public class NodeActor extends UntypedActor{
                     // officially announces itself to the system.
 
                 } else { // isResponse (from the next clockwise node)
+                    storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".txt";
+                    // initialize local storage
+                    this.storage = new Storage(this.storagePath);
                     // Here we receive the data sent from the next node, this is all the data present in the system
                     // that we are responsible for.
                     this.storage.initializeStorage(((RequestInitItemsMessage) message).getItems());
@@ -474,7 +494,6 @@ public class NodeActor extends UntypedActor{
                 if (this.N > this.ring.getNumberOfPeers()){
                     throw new Exception("N is greater than the number of active nodes.");
                 }
-                // TODO: Check that we do not receive a read/write request while we are handling already another operation
                 OperationMessage opMessage = (OperationMessage) message;
                 if (opMessage.isClient()){
                     // if the message is coming from the client it must be a request
@@ -498,13 +517,10 @@ public class NodeActor extends UntypedActor{
                     this.handleClientReadRequest(opMessage.getKey());
                 } else{ // isNode
                     if (opMessage.isRequest()){
-                        // TODO: Consideration: è possibile che un nodo non abbia un item che dovrebbe avere? Magari per qualche crash? Oppure in ogni caso, se faccio una richiesta agli N nodi replica, sono sicuro che l'item c'è in tutti? (la cosa può dare problemi nel caso dell'update)
                         if (opMessage.isRead()){
                             // A node is requiring a data item
-                            // TODO: ask Storage class for the data item with specific key
                             Item item = storage.getItem(opMessage.getKey());
-                            // TODO: handle missing key case
-                            // In case the is not item with this key, return the message with null
+                             // In case the is not item with this key, return the message with null
                             // version number. In this way the coordinator can issue an update
                             // to all replicas with version number 1 and the item will be created.
                             if (item == null) {
@@ -519,8 +535,6 @@ public class NodeActor extends UntypedActor{
                                         getSelf());
                             }
                         } else{ // isUpdate
-                            // TODO: a node is telling us to update an element in our storage (update the version)
-                            // (FRA)
                             this.storage.update(opMessage.getKey(), opMessage.getValue(), opMessage.getVersion());
                             nodeActorLogger.info(this.storage.toString());
                         }
@@ -538,7 +552,6 @@ public class NodeActor extends UntypedActor{
                             // HERE WE ARE ASSUMING THAT IF AT LEAST ONE NODE DOES NOT HAVE THE ITEM,
                             // THEN ALSO ALL THE OTHER REPLICAS DON'T AS WELL
                             if (((OperationMessage) message).getVersion() == null && !this.readOperation){
-                                // TODO: check the logic of this, is it ok done in this way?
 
                                 Item newItem = new Item(((OperationMessage) message).getKey(),
                                         null, 0); // the version will become 1 before sending to replicas
@@ -586,14 +599,10 @@ public class NodeActor extends UntypedActor{
                             "failure",
                             null);
                     clientReferenceRequest.tell(clientResponse, getSelf());
-                    this.quorum = 0;
-                    this.quorumThreshold = 0;
-                    this.waitingQuorum = false;
-                    this.readResponseMessages.clear();
-                    this.clientReferenceRequest = null;
+                    resetVariables();
                 }else {
-                    // TODO: send back failure to client?
-                    throw new Exception("Timeout, operation took too long");
+                    clientReferenceRequest.tell(new TimeoutMessage(), getSelf());
+                    resetVariables();
                 }
                 break;
             default:

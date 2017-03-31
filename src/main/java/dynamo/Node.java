@@ -65,6 +65,7 @@ public class Node {
             Integer n = myConfig.getInt("dynamo.replication.N");
             Integer r = myConfig.getInt("dynamo.replication.R");
             Integer w = myConfig.getInt("dynamo.replication.W");
+            String path = myConfig.getString("dynamo.storage.location");
 
             if (r + w < n){
                 // Illegal
@@ -73,20 +74,17 @@ public class Node {
 
             // Can extend here the create call with arguments to the
             // constructor of the dynamo.Node class
-            localNode = system.actorOf(Props.create(NodeActor.class, localId, n, r, w), "node");
+            localNode = system.actorOf(Props.create(NodeActor.class, localId, n, r, w, path), "node");
             System.out.println("Node started and waiting for messages (id : " + localId + ")");
 
-            if (join){
-                localNode.tell(new StartJoinMessage(remoteIp, remotePort), null);
-            }
+            // if is the starting Node, remoteIp and remotePort == null
+            localNode.tell(new StartJoinMessage(remoteIp, remotePort), null);
 
-        }
-
-        if (args[0].equals("recover")) {
+        } else if (args[0].equals("recover")) {
             throw new IllegalArgumentException("Not yet implemented.");
             // TODO
-        }else{
-        //     throw new IllegalArgumentException("Argument not recognized.");
+        } else {
+             throw new IllegalArgumentException("Argument not recognized.");
         }
     }
 }

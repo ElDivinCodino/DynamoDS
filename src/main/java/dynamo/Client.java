@@ -10,6 +10,7 @@ import com.typesafe.config.ConfigFactory;
 import dynamo.messages.GetMessage;
 import dynamo.messages.LeaveMessage;
 import dynamo.messages.OperationMessage;
+import dynamo.messages.TimeoutMessage;
 import dynamo.nodeutilities.Utilities;
 import scala.concurrent.Future;
 import scala.concurrent.Await;
@@ -64,7 +65,7 @@ public class Client {
 
         if(args[2].equals("read") && args.length == 4) {
             newClient.get(Integer.parseInt(args[3]));
-        } else if (args[2].equals("write") && args.length == 5) {
+        } else if (args[2].equals("update") && args.length == 5) {
             newClient.update(Integer.parseInt(args[3]), args[4]);
         } else if (args[2].equals("leave") && args.length == 3) {
             newClient.leave();
@@ -126,6 +127,8 @@ public class Client {
                     }
                 } else if(result instanceof LeaveMessage) {
                     System.out.println("Node left successfully Dynamo");
+                } else if (result instanceof TimeoutMessage) {
+                    System.out.println("Timeout has expired");
                 }
             } catch (Exception e) {
                 e.printStackTrace();

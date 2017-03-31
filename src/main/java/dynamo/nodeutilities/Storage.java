@@ -11,15 +11,12 @@ import java.util.*;
 public class Storage {
 
     private ArrayList<Item> db;
-    // TODO: Pass to the constructor the path to be defined in the akka config (e.g. $HOME)
-    private String pathname = "./storage/storage.txt";
 
-    public Storage() {
+    private String pathname;
+
+    public Storage(String pathname) {
         this.db = new ArrayList<>();
-    }
-
-    public Storage(ArrayList<Item> db) {
-        this.db = db;
+        this.pathname = pathname;
     }
 
     public void initializeStorage(ArrayList<Item> initItems){
@@ -87,7 +84,7 @@ public class Storage {
         while(db.size() > 0) {
             item = db.get(0); // we exploit the fact that elements are sorted in crescent order to improve performance
 
-            if(item.getKey() < key) { //TODO choose if less / less or equal
+            if(item.getKey() <= key) {
                 db.remove(item);
             } else {
                 return;
@@ -119,14 +116,13 @@ public class Storage {
      * saves the storage on a local text file
      */
     private void save() {
-        //TODO
-        /*try {
+        try {
             FileWriter out = new FileWriter(pathname);
             out.write(this.toString());
             out.close();
         } catch (IOException e) {
             e.printStackTrace();
-        }*/
+        }
     }
 
     /**

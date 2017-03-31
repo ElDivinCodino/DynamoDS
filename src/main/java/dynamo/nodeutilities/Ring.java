@@ -18,8 +18,6 @@ public class Ring {
             peers.put(peer.getKey(), peer);
             return true;
         }
-        // TODO: throw an exception in case a key already exists. to do it here or in the main Node class.
-        // (FRA) Maybe doesn't have to be treated as an exception... think if a node joins while this one is recovering
         return false;
     }
 
@@ -130,7 +128,6 @@ public class Ring {
      * from startingKey, false otherwise
      */
     public boolean selfIsNextNClockwise(Integer startingKey, Integer N, Integer selfKey){
-        // TODO: Here there is a problem in case we have smaller number of nodes than N.
         boolean amNext = false;
         Integer replicaCounter = 1;
         Integer currentPeer = this.next(startingKey);
@@ -153,7 +150,7 @@ public class Ring {
      */
     public boolean isNodeWithinRangeFromItem(Integer itemKey, Integer nodeKey, Integer N) {
         Integer counter = 1;  // take into account the first one
-        Integer currentPeer = this.nextEqual(itemKey); // TODO: As usual, we have to be decide when a node stores an item based on its key. So use next or nextEqual?
+        Integer currentPeer = this.nextEqual(itemKey);
         boolean responsible = false;
 
         /*

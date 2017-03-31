@@ -56,11 +56,7 @@ public class Peer implements Serializable {
 
     @Override
     public String toString() {
-        return "NodeUtilities.Peer{" +
-                "remotePath='" + remotePath + '\'' +
-                ", remoteSelection=" + remoteSelection +
-                ", key=" + key +
-                '}';
+        return remoteSelection.toString();
     }
 
     @Override
