@@ -16,6 +16,7 @@ import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
@@ -75,8 +76,6 @@ public class NodeActor extends UntypedActor{
 
         // Now have to initialize current NodeUtilities.Ring class to manage Peers.
         ring = new Ring();
-        // add self to the ring
-        ring.addPeer(new Peer(this.remotePath, context().actorSelection(self().path()),  this.idKey));
 
         this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.INFO);
     }
@@ -229,18 +228,16 @@ public class NodeActor extends UntypedActor{
         // the message returns a list of remotePaths and ids
         // from this we get the Remote reference to the actor
         // or null if a request with an already existing key is sent
-        if (msg.getPeers() == null) {
-            throw new Exception("Node key already exists");
-        } else {
-            // Add to the ring the peers
-            ring.addPeers(msg.getPeers());
-        }
+//        if (msg.getPeers() == null) {
+//            throw new Exception("Node key already exists");
+//        } else {
+//            // Add to the ring the peers
+//            ring.addPeers(msg.getPeers());
+//        }
+        ring.addPeers(msg.getPeers());
 
         nodeActorLogger.info("requestPeersToRemote: initialized Ring with {} peers",
                 this.ring.getNumberOfPeers());
-
-        // Print current state of ring
-        nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
     }
 
 //    /**
@@ -328,9 +325,17 @@ public class NodeActor extends UntypedActor{
         // class name is represented as dynamo.messages.className, so split and take last element.
         switch (message.getClass().getName().split("[.]")[2]) {
             case "StartJoinMessage": // from actor system, request to join network
-                // if Node is the first one, just initialize the storage
+                /*
+                if Node is the first one, initialize the storage and generate a new key
+                Also add self to the Ring. In the case we have to wait for the Peers
+                to decide for the new key (else branch) we have to wait adding this new node
+                to the ring (because it needs the new key).
+                 */
                 if(((StartJoinMessage) message).getRemoteIp() == null) {
-                    storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".txt";
+                    // first node in the system, generate the id
+                    this.idKey = ThreadLocalRandom.current().nextInt(1, 100);
+                    ring.addPeer(new Peer(this.remotePath, context().actorSelection(self().path()),  this.idKey));
+                    storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".dynamo";
                     // initialize local storage
                     this.storage = new Storage(this.storagePath);
                 } else {
@@ -338,7 +343,20 @@ public class NodeActor extends UntypedActor{
                     String remotePath = "akka.tcp://dynamo@"+
                             ((StartJoinMessage) message).getRemoteIp() + ":" +
                             ((StartJoinMessage) message).getRemotePort() + "/user/node";
+
                     requestPeersToRemote(remotePath);
+                    //once we have the list of peers we can generate this node's key checking
+                    // it does not collide with an existing one
+                    do {
+                        this.idKey = ThreadLocalRandom.current().nextInt(1, 100);
+                    } while(this.ring.keyExists(this.idKey));
+                    // add self to the ring
+                    ring.addPeer(new Peer(this.remotePath, context().actorSelection(self().path()),  this.idKey));
+                    // Print current state of ring
+                    nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
+                    storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".dynamo";
+                    // initialize local storage
+                    this.storage = new Storage(this.storagePath);
                     // Here we request the items we are responsible for to the
                     // next node in the ring
                     this.ring.getNextPeer(this.idKey).getRemoteSelection().tell(
@@ -346,7 +364,7 @@ public class NodeActor extends UntypedActor{
                             getSelf()
                     );
                 }
-
+                nodeActorLogger.info("Initialized node unique key (key: {})", this.idKey);
                 break;
             case "HelloMatesMessage":
                 // Here the nodes registers the info about the new peer and
@@ -370,7 +388,7 @@ public class NodeActor extends UntypedActor{
                 this.leaveSystem();
                 // send response to client and shutdown system
                 getSender().tell(new LeaveMessage(), getSelf());
-                context().system().shutdown();
+                context().system().terminate();
                 break;
             case "ByeMatesMessage":
                 /*
@@ -422,14 +440,7 @@ public class NodeActor extends UntypedActor{
                 }
                 break;
             case "PeersListMessage":
-                System.out.println("peer list entrato");
-                PeersListMessage request = ((PeersListMessage)message);
-                PeersListMessage reply;
-                if (ring.getPeers().containsKey(request.getPeers().firstEntry().getKey())) {
-                    reply = new PeersListMessage(false, null);
-                } else {
-                    reply = new PeersListMessage(false, ring.getPeers());
-                }
+                PeersListMessage reply = new PeersListMessage(false, this.ring.getPeers());
                 getSender().tell(reply, getSelf());
                 break;
             case "RequestInitItemsMessage":
@@ -466,9 +477,6 @@ public class NodeActor extends UntypedActor{
                     // officially announces itself to the system.
 
                 } else { // isResponse (from the next clockwise node)
-                    storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".txt";
-                    // initialize local storage
-                    this.storage = new Storage(this.storagePath);
                     // Here we receive the data sent from the next node, this is all the data present in the system
                     // that we are responsible for.
                     this.storage.initializeStorage(((RequestInitItemsMessage) message).getItems());

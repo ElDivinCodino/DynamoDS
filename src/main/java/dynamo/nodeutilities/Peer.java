@@ -56,7 +56,7 @@ public class Peer implements Serializable {
 
     @Override
     public String toString() {
-        return remoteSelection.toString();
+        return remoteSelection.toString() + ", key: " + key;
     }
 
     @Override

@@ -8,6 +8,7 @@ import akka.event.LoggingAdapter;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import dynamo.messages.StartJoinMessage;
+import dynamo.nodeutilities.Utilities;
 
 import java.net.InetAddress;
 
@@ -24,8 +25,8 @@ public class Node {
         String localIP = null;
 
         try {
-            localIP = InetAddress.getLocalHost().getHostAddress().toString();
-            System.out.println(localIP);
+            localIP = InetAddress.getLocalHost().getHostAddress();
+//            System.out.println(localIP);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -61,15 +62,22 @@ public class Node {
             if (join){
                 remoteIp = args[1];
                 remotePort = args[2];
-                localId = Integer.parseInt(args[3]);
+                if (args.length == 4){
+                    localId = Integer.parseInt(args[3]);
+                }
             } else{
-                localId = Integer.parseInt(args[1]);
+                if (args.length == 2){
+                    localId = Integer.parseInt(args[1]);
+                }
             }
 
             Config myConfig = ConfigFactory.load("application");
-            Config custom = ConfigFactory.parseString("akka.remote.netty.tcp.hostname =" + localIP + ", akka.remote.netty.tcp.port = " + (10000 + localId));
+            // bind the node to a random port
+            Integer randomPort = Utilities.getAvailablePort(10000, 10100);
+            Config custom = ConfigFactory.parseString("akka.remote.netty.tcp.hostname =" + localIP + ", akka.remote.netty.tcp.port = " + randomPort);
 
             ActorSystem system = ActorSystem.create("dynamo", custom.withFallback(myConfig));
+            System.out.println("ActorSystem started successfully, listening on ip: " + localIP + ", port " + randomPort);
             ActorRef localNode = null;
 
             // Get replication parameters from config file.
@@ -88,7 +96,11 @@ public class Node {
             localNode = system.actorOf(Props.create(NodeActor.class, localId, n, r, w, path), "node");
             System.out.println("Node started and waiting for messages (id : " + localId + ")");
 
-            // if is the starting Node, remoteIp and remotePort == null
+            /*
+            if is the starting Node, remoteIp and remotePort == null. When the node receives
+            the StartJoinMessage, if these parameters are null it knows that it is the first
+            node of the system. So it does not try to contact anyone and instantiates an empty storage.
+             */
             localNode.tell(new StartJoinMessage(remoteIp, remotePort), null);
 
         } else if (args[0].equals("recover")) {

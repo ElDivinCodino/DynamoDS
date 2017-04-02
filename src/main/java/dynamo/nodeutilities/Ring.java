@@ -89,6 +89,10 @@ public class Ring {
         return this.peers.size();
     }
 
+    public boolean keyExists(Integer key) {
+        return this.peers.keySet().contains(key);
+    }
+
     /**
      * Returns an array of Peers, where the peers are
      * the Nodes responsible for the replica of a specific data item.
