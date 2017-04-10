@@ -4,11 +4,14 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.ThreadLocalRandom;
 
-/**
- * Created by StefanoFiora on 21/03/2017.
- */
 public class Utilities {
 
+    /**
+     * Checks if a certain port is available
+     *
+     * @param port the port to be checked
+     * @return true if the port is available, false otherwise
+     */
     public static boolean available(int port) {
 //        System.out.println("--------------Testing port " + port);
         Socket s = null;
@@ -33,6 +36,14 @@ public class Utilities {
         }
     }
 
+    /**
+     * Gets an available port between two thresholds
+     *
+     * @param min the minimum threshold
+     * @param max the maximum threshold
+     *
+     * @return a random available port between the thresholds
+     */
     public static Integer getAvailablePort(Integer min, Integer max){
         Integer randomNum = ThreadLocalRandom.current().nextInt(min, max + 1);
         while (!available(randomNum)){

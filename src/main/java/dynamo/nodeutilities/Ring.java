@@ -2,17 +2,18 @@ package dynamo.nodeutilities;
 
 import java.util.*;
 
-/**
- * Created by StefanoFiora on 14/03/2017.
- */
 public class Ring {
 
-    //    List<NodeUtilities.Peer> peers = new ArrayList<>();
     TreeMap<Integer, Peer> peers = new TreeMap<Integer, Peer>();
 
     public Ring(){ }
 
-    //TODO put the javadoc
+    /**
+     * Adds a Peer to the Collection
+     *
+     * @param peer the Peer to be added to the Collection
+     * @return true if the Peer was not already in the Collection, false otherwise
+     */
     public boolean addPeer(Peer peer){
         if (!peers.containsKey(peer.getKey())) {
             peers.put(peer.getKey(), peer);
@@ -21,8 +22,12 @@ public class Ring {
         return false;
     }
 
-    //TODO put the javadoc
-    // (FRA) ha senso che restituisca un booleano?
+    /**
+     * Adds a set of Peers to the Collection
+     *
+     * @param peers the set of Peers to be added to the Collection
+     * @return true if the entire set was not already in the Collection, false otherwise
+     */
     public boolean addPeers(TreeMap<Integer, Peer> peers){
         for (Map.Entry<Integer, Peer> entry : peers.entrySet()){
             if (!this.addPeer(entry.getValue()))
@@ -31,11 +36,12 @@ public class Ring {
         return true;
     }
 
-    public boolean removePeer(Peer peer){
-        return this.removePeer(peer.getKey());
-    }
-
-    //TODO put the javadoc
+    /**
+     * Removes a Peer from the Collection
+     *
+     * @param key the key of the Peer that has to be removed
+     * @return true if the Peer is contained in the Collection and correctly removed, false otherwise
+     */
     public boolean removePeer(Integer key){
         if (peers.containsKey(key)){
             peers.remove(key);
@@ -44,9 +50,14 @@ public class Ring {
         return false;
     }
 
-    //TODO put the javadoc
+    /**
+     * Gets the least equal or greater key
+     *
+     * @param key the predecessor of the desired key
+     * @return the least equal or greater key, or null if there is no such key
+     */
     public Integer nextEqual(Integer key){
-        // gets the least equal or greater key
+
         Integer lowest = peers.ceilingKey(key);
         // in case there is not a key, returns null
         // this means we are at the 'end' of the ring,
@@ -57,7 +68,12 @@ public class Ring {
         return lowest;
     }
 
-    //TODO put the javadoc
+    /**
+     * Gets the least greater key
+     *
+     * @param key the predecessor of the desired key
+     * @return the least greater key, or null if there is no such key
+     */
     public Integer next(Integer key){
         Integer next = peers.higherKey(key);
         if (next == null){
@@ -66,29 +82,41 @@ public class Ring {
         return next;
     }
 
-    public Integer previous(Integer key){
-        Integer previous = peers.lowerKey(key);
-        if (previous == null){
-            previous = peers.lastKey();
-        }
-        return previous;
-    }
-
-    //TODO put the javadoc
+    /**
+     * Gets the Peer corresponding to the given key
+     *
+     * @param key the key of the Peer to be obtained
+     * @return the Peer corresponding to the key
+     */
     public Peer getPeer(Integer key){
         return peers.get(key);
     }
 
-    //TODO put the javadoc
+    /**
+     * Gets the Peer next to the given key
+     *
+     * @param key the key of the predecessor of the desired Peer
+     * @return the Peer having the next key in the Ring
+     */
     public Peer getNextPeer(Integer key){
         return this.getPeer(this.next(key));
     }
 
-    //TODO put the javadoc
+    /**
+     * Gets the number of Peers currently joined to the Ring
+     *
+     * @return the number of Peers currently joined to the Ring
+     */
     public Integer getNumberOfPeers(){
         return this.peers.size();
     }
 
+    /**
+     * Returns true if a Peer with a certain key belongs to the Ring, false otherwise
+     *
+     * @param key the key of the Peer that has to be checked
+     * @return true if a Peer with a certain key belongs to the Ring, false otherwise
+     */
     public boolean keyExists(Integer key) {
         return this.peers.keySet().contains(key);
     }
@@ -171,30 +199,16 @@ public class Ring {
             counter++;
         }
         return responsible;
-
-//        for(int i = 0; i < N; i++) {
-//            if(/*currentPeer contains item*/) {
-//                counter++;
-//            } else {
-//                break; // performance reasons
-//            }
-//            if(/*i am within the N-counter nodes*/) {
-//                return true;
-//            } else {
-//                return false;
-//            }
-//        }
     }
 
-    //TODO put the javadoc
+    /**
+     * Gets the entire set of Peers currently joined to the Ring
+     *
+     * @return the entire set of Peers currently joined to the Ring
+     */
     public TreeMap<Integer, Peer> getPeers() {
         return peers;
     }
-
-    public void setPeers(TreeMap<Integer, Peer> peers) {
-        this.peers = peers;
-    }
-
 
     @Override
     public String toString() {

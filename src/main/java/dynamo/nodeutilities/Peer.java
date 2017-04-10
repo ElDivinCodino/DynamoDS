@@ -5,9 +5,6 @@ import akka.actor.ActorSelection;
 import java.io.Serializable;
 
 
-/**
- * Created by StefanoFioravanzo on 14/03/2017.
- */
 public class Peer implements Serializable {
 
     // the akka remote path that identifies an actor.
@@ -16,11 +13,6 @@ public class Peer implements Serializable {
     private ActorSelection remoteSelection = null;
     // unique (global) actor identifier
     private Integer key = null;
-
-    public Peer(String remotePath, Integer key){
-        this.remotePath = remotePath;
-        this.key = key;
-    }
 
     public Peer(String remotePath, ActorSelection remoteSelection, Integer key){
         this.remotePath = remotePath;

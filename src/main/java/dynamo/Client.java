@@ -2,12 +2,9 @@ package dynamo;
 
 import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
 import akka.pattern.Patterns;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import dynamo.messages.GetMessage;
 import dynamo.messages.LeaveMessage;
 import dynamo.messages.OperationMessage;
 import dynamo.messages.TimeoutMessage;
@@ -29,12 +26,10 @@ public class Client {
 
     private String remotePath;
     private ActorSystem system;
-    private LoggingAdapter clientLogger;
 
 
     public Client(String address, String port) {
         // load configuration from application.conf file
-        final Config config = ConfigFactory.load();
         Config myConfig = ConfigFactory.load("application");
 
         // bind the client to a random port
@@ -43,8 +38,6 @@ public class Client {
 
         this.remotePath = "akka.tcp://dynamo@"+address+":"+port+"/user/node";
         this.system = ActorSystem.create("dynamo", custom.withFallback(myConfig));
-
-        this.clientLogger = this.system.log();
     }
 
     public static void main(String[] args) {

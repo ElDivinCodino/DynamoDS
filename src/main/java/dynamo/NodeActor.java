@@ -2,8 +2,6 @@ package dynamo;
 
 import akka.actor.ActorRef;
 import akka.actor.Cancellable;
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
 import dynamo.messages.*;
 import dynamo.nodeutilities.*;
 import akka.actor.ActorSelection;
@@ -21,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
 
-//  LoggingAdapter nodeActorLogger = Logging.getLogger(getContext().system(), this);
     DynamoLogger nodeActorLogger = new DynamoLogger();
 
     // For know we hard code these values
@@ -128,8 +125,8 @@ public class NodeActor extends UntypedActor{
     }
 
     /**
-     * Returns the item with newer version number from
-     * the responses from the replicas
+     * Returns the item with newer version number from the responses from the replicas
+     *
      * @return an Item object with value, key and version number
      */
     private Item getLatestVersionItemFromResponses() {
@@ -144,9 +141,7 @@ public class NodeActor extends UntypedActor{
     }
 
     /**
-     * Decides what item to send back to the client between the ones
-     * received by the replicas in the system.
-     * Then sends the item.
+     * Decides what Item to send back to the client between the ones received by the replicas in the system, and then sends it.
      */
     private void handleReadResponseToClient() {
         Item latest = getLatestVersionItemFromResponses();
@@ -164,8 +159,9 @@ public class NodeActor extends UntypedActor{
     }
 
     /**
-     * Send success message to client and then tell the replicas
-     * to update their data item with the new value and latest version number.
+     * Sends success message to client and then tell the replicas to update their data item with the new value and latest version number.
+     *
+     * @param item the Item to be updated
      */
     private void issueUpdateToReplicas(Item item){
         if (item == null) {
@@ -225,57 +221,14 @@ public class NodeActor extends UntypedActor{
         PeersListMessage msg = (PeersListMessage) message;
         assert !msg.isRequest();
 
-        // the message returns a list of remotePaths and ids
-        // from this we get the Remote reference to the actor
-        // or null if a request with an already existing key is sent
-//        if (msg.getPeers() == null) {
-//            throw new Exception("Node key already exists");
-//        } else {
-//            // Add to the ring the peers
-//            ring.addPeers(msg.getPeers());
-//        }
         ring.addPeers(msg.getPeers());
 
         nodeActorLogger.info("requestPeersToRemote: initialized Ring with {} peers",
                 this.ring.getNumberOfPeers());
     }
 
-//    /**
-//     * Request to the next node in the network the data items
-//     * that need to pass to our competence. This method is blocking, which means
-//     * that the actor waits for the reply from the remote actor. This is possible
-//     * because no other node in the network knows of the existence of this node yet.
-//     * So it is not possible to receive other messages while we are waiting for
-//     * this reply.
-//     * @throws Exception
-//     */
-//    private void requestItemsToNextNode() throws Exception {
-//        //first get the next node
-//        String remotePathNext = ring.getNextPeer(this.idKey).getRemotePath();
-//        final Timeout timeout = new Timeout(Duration.create(5, "seconds"));
-//        ActorSelection remoteActor = getContext().actorSelection(remotePathNext);
-//        final Future<Object> future = Patterns.ask(remoteActor,
-//                new RequestInitItemsMessage(true, this.idKey, this.remotePath, storage.getStorage()), timeout);
-//
-//        nodeActorLogger.debug("requestItemsToNextNode: waiting for next actor (key {}) to respond",
-//                this.ring.getNextPeer(this.idKey));
-//
-//        // wait for an acknowledgement
-//        final Object message = Await.result(future, timeout.duration());
-//        assert message instanceof RequestInitItemsMessage;
-//
-//        // (FRA) ALL THIS IMPLEMENTED IN onReceive METHOD
-//        //RequestInitItemsMessage msg = (RequestInitItemsMessage) message;
-//        //assert !msg.isRequest();
-//
-//        //// now instantiate local storage with received data
-//        //this.storage = new Storage(msg.getItems());
-//        //nodeActorLogger.debug("{}requestItemsToNextNode: initialized storage with new items", LOG_PREFIX);
-//    }
-
     /**
-     * Send a message to everyone in the network (except to self)
-     * to announce the new node.
+     * Send a message to everyone in the network (except to self) to announce the new node.
      */
     private void announceSelfToSystem() {
         // send a hello message to everyone.
@@ -286,8 +239,7 @@ public class NodeActor extends UntypedActor{
     }
 
     /**
-     * Send a message to every one in the network (except to self)
-     * to account we are leaving the system.
+     * Send a message to every one in the network (except to self) to account we are leaving the system.
      */
     private void leaveSystem(){
         // send a leave message to everyone
@@ -335,6 +287,7 @@ public class NodeActor extends UntypedActor{
                     // first node in the system, generate the id
                     this.idKey = ThreadLocalRandom.current().nextInt(1, 100);
                     ring.addPeer(new Peer(this.remotePath, context().actorSelection(self().path()),  this.idKey));
+                    System.out.println("Node started and waiting for messages (id : " + this.idKey + ")");
                     storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".dynamo";
                     // initialize local storage
                     this.storage = new Storage(this.storagePath);
@@ -611,6 +564,46 @@ public class NodeActor extends UntypedActor{
                 }else {
                     clientReferenceRequest.tell(new TimeoutMessage(), getSelf());
                     resetVariables();
+                }
+                break;
+            case "RecoveryMessage":
+                RecoveryMessage recMessage = ((RecoveryMessage)message);
+
+                // if I received a recovery request from User interface
+                if (recMessage.getRemoteIp() != null) {
+
+                    String remotePath = "akka.tcp://dynamo@"+
+                            recMessage.getRemoteIp() + ":" +
+                            recMessage.getRemotePort() + "/user/node";
+
+                    requestPeersToRemote(remotePath);
+
+                    String logMessage = "announce changing parameters: sent RecoveryMessage to remote Node with key " + this.idKey;
+                    recMessage = new RecoveryMessage(this.remotePath, context().actorSelection(self().path()), recMessage.getRequesterId());
+                    broadcastToPeers(recMessage, logMessage);
+
+                    // also send to myself, in order to update the Ring I received
+                    getSelf().tell(recMessage, getSelf());
+
+                    // Print current state of ring
+                    nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
+                    storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".dynamo";
+
+                    // initialize local storage
+                    storage = new Storage(this.storagePath);
+                    boolean load = storage.loadItems();
+
+                    if(!load) {
+                        throw new Exception("Cannot load the Items from the local Storage");
+                    } else {
+                        System.out.println("Items correctly loaded from local Storage");
+                    }
+
+                    storage.removeItemsOutOfResponsibility(this.idKey, this.ring, this.N);
+                    // if I received a recovery request from the Node
+                } else {
+                    ring.getPeer(recMessage.getRequesterId()).setRemotePath(recMessage.getRemotePath());
+                    ring.getPeer(recMessage.getRequesterId()).setRemoteSelection(recMessage.getActorSelection());
                 }
                 break;
             default:

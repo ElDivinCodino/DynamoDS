@@ -1,9 +1,9 @@
 package dynamo.nodeutilities;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.lang.reflect.Array;
+import java.io.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * This class represents the storage where all Items for which a particular node is responsible are stored
@@ -55,50 +55,15 @@ public class Storage {
     }
 
     /**
-     * deletes a NodeUtilities.Item from the NodeUtilities.Storage
-     *
-     * @param key the key of the NodeUtilities.Item
-     */
-    public void delete(int key) {
-        Item item;
-
-        for(int i = 0; i < db.size(); i++) {
-            item = db.get(i);
-
-            if(item.getKey() == key) {
-                db.remove(item);
-                save();
-                return;
-            }
-        }
-    }
-
-    /**
-     * deletes NodeUtilities.Item up to a certain value from the NodeUtilities.Storage
-     *
-     * @param key the key of the NodeUtilities.Item
-     */
-    public void deleteUpTo(int key) {
-        Item item;
-
-        while(db.size() > 0) {
-            item = db.get(0); // we exploit the fact that elements are sorted in crescent order to improve performance
-
-            if(item.getKey() <= key) {
-                db.remove(item);
-            } else {
-                return;
-            }
-        }
-        return;
-    }
-
-    /**
      * This method iterates over every item in the storage and
      * checks if the local node is not among the N replicas of
      * a given item anymore
+     *
+     * @param localNodeKey the key of the current node
+     * @param localNodeRing the Ring of the current node
+     * @param N the number of Peers that must have a copy of an Item
+     *
      */
-    //TODO improve the JavaDoc
     public void removeItemsOutOfResponsibility(Integer localNodeKey, Ring localNodeRing, Integer N){
         ArrayList<Item> valuesToBeRemoved = new ArrayList<>(); // to avoid java.util.ConcurrentModificationException
 
@@ -113,23 +78,10 @@ public class Storage {
     }
 
     /**
-     * saves the storage on a local text file
-     */
-    private void save() {
-        try {
-            FileWriter out = new FileWriter(pathname);
-            out.write(this.toString());
-            out.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * gets a specific NodeUtilities.Item
+     * Gets a specific Item
      *
      * @param key the key of the NodeUtilities.Item
-     * @return the NodeUtilities.Item
+     * @return the Item
      */
     public Item getItem(int key) {
         Item item;
@@ -142,17 +94,6 @@ public class Storage {
             }
         }
         return null;
-    }
-
-    /**
-     * @param storage the node next to the current
-     * @return the list of the Items that are stored in this node but not in the next one
-     */
-    public ArrayList<Item> retrieveAll(ArrayList<Item> storage) {
-        ArrayList<Item> list = new ArrayList<>();
-        list.addAll(db);
-        list.removeAll(storage);
-        return list;
     }
 
     /**
@@ -175,24 +116,6 @@ public class Storage {
     }
 
     /**
-     * This method deletes, after a Node joining or leaving the system, the Items the Storage is not anymore responsible for
-     * @param receivedList the list of Items the Storage is not anymore responsible for
-     */
-    public void looseResponsibilityOf(ArrayList<Item> receivedList) {
-        db.removeAll(receivedList);
-        save();
-    }
-
-    /**
-     * This method adds, after a Node joining or leaving the system, the Items the Storage is now responsible for
-     * @param receivedList the list of Items the Storage is not anymore responsible for
-     */
-    public void acquireResponsibilityOf(ArrayList<Item> receivedList) {
-        db.addAll(receivedList);
-        save();
-    }
-
-    /*
     * @return the ArrayList representing the Storage
     */
     public ArrayList<Item> getStorage() {
@@ -201,12 +124,60 @@ public class Storage {
 
 
     /**
-     * recovers after a crash
-     *
-     * to be implemented yet
+     * saves the storage on a local text file
      */
-    public void recover() {
+    private void save() {
+        try {
+            FileWriter out = new FileWriter(pathname);
+            out.write(this.toString());
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
+    /**
+     * load Items after a crash, when recovery is requested
+     * @return true if the operation has been correctly executed, false otherwise
+     */
+    public boolean loadItems() throws Exception {
+
+        int key, version;
+        String value;
+
+        try {
+            FileReader in = new FileReader(pathname);
+            BufferedReader b = new BufferedReader(in);
+
+            // this is the "Storage: \n" line, so must be discarded
+            b.readLine();
+            String current;
+
+            Pattern pattern = Pattern.compile("\t- Item\\{key=(\\d+), value='(\\w+)', version=(\\d+)\\}");
+            Matcher matcher;
+
+            while((current = b.readLine()) != null) {
+
+                matcher = pattern.matcher(current);
+
+                if(matcher.matches()) {
+                    key = Integer.parseInt(matcher.group(1));
+                    value = matcher.group(2);
+                    version = Integer.parseInt(matcher.group(3));
+
+                    update(key, value, version);
+                } else {
+                    throw new Exception("Corrupted data. Failed to load local Storage.");
+                }
+            }
+            b.close();
+            in.close();
+        } catch (FileNotFoundException e) {
+            return false;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return true;
     }
 
     /**

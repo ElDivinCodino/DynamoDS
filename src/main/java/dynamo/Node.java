@@ -3,18 +3,14 @@ package dynamo;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import dynamo.messages.RecoveryMessage;
 import dynamo.messages.StartJoinMessage;
 import dynamo.nodeutilities.Utilities;
 
 import java.net.InetAddress;
 
-/**
- * Created by StefanoFioravanzo on 15/03/2017.
- */
 public class Node {
     public static void main(String[] args){
 
@@ -26,7 +22,6 @@ public class Node {
 
         try {
             localIP = InetAddress.getLocalHost().getHostAddress();
-//            System.out.println(localIP);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -57,11 +52,10 @@ public class Node {
                 join = true;
             }
 
-            // TODO: Have to generate here a unique id key for the node? For now we are taking it from CLI
-
             if (join){
                 remoteIp = args[1];
                 remotePort = args[2];
+                // if the ID is fixed by the Client, set it
                 if (args.length == 4){
                     localId = Integer.parseInt(args[3]);
                 }
@@ -78,7 +72,6 @@ public class Node {
 
             ActorSystem system = ActorSystem.create("dynamo", custom.withFallback(myConfig));
             System.out.println("ActorSystem started successfully, listening on ip: " + localIP + ", port " + randomPort);
-            ActorRef localNode = null;
 
             // Get replication parameters from config file.
             Integer n = myConfig.getInt("dynamo.replication.N");
@@ -93,8 +86,7 @@ public class Node {
 
             // Can extend here the create call with arguments to the
             // constructor of the dynamo.Node class
-            localNode = system.actorOf(Props.create(NodeActor.class, localId, n, r, w, path), "node");
-            System.out.println("Node started and waiting for messages (id : " + localId + ")");
+            ActorRef localNode = system.actorOf(Props.create(NodeActor.class, localId, n, r, w, path), "node");
 
             /*
             if is the starting Node, remoteIp and remotePort == null. When the node receives
@@ -104,8 +96,34 @@ public class Node {
             localNode.tell(new StartJoinMessage(remoteIp, remotePort), null);
 
         } else if (args[0].equals("recover")) {
-            throw new IllegalArgumentException("Not yet implemented.");
-            // TODO
+
+            remoteIp = args[1];
+            remotePort = args[2];
+            localId = Integer.parseInt(args[3]);
+
+            Config myConfig = ConfigFactory.load("application");
+            Integer randomPort = Utilities.getAvailablePort(10000, 10100);
+            Config custom = ConfigFactory.parseString("akka.remote.netty.tcp.hostname =" + localIP + ", akka.remote.netty.tcp.port = " + randomPort);
+
+            ActorSystem system = ActorSystem.create("dynamo", custom.withFallback(myConfig));
+            System.out.println("ActorSystem restarted successfully, listening on ip: " + localIP + ", port " + randomPort);
+
+            // Get replication parameters from config file.
+            Integer n = myConfig.getInt("dynamo.replication.N");
+            Integer r = myConfig.getInt("dynamo.replication.R");
+            Integer w = myConfig.getInt("dynamo.replication.W");
+            String path = myConfig.getString("dynamo.storage.location");
+
+            if (r + w < n){
+                // Illegal
+                throw new IllegalArgumentException("R + W is less than N.");
+            }
+
+            // Can extend here the create call with arguments to the
+            // constructor of the dynamo.Node class
+            ActorRef localNode = system.actorOf(Props.create(NodeActor.class, localId, n, r, w, path), "node");
+
+            localNode.tell(new RecoveryMessage(remoteIp, remotePort, localId), null);
         } else {
              throw new IllegalArgumentException("Argument not recognized.");
         }
