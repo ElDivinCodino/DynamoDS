@@ -41,4 +41,15 @@ public class RecoveryMessage implements Serializable{
     public String getRemotePort() {
         return remotePort;
     }
+
+    @Override
+    public String toString() {
+        return "RecoveryMessage{" +
+                "remoteIp='" + remoteIp + '\'' +
+                ", remotePort='" + remotePort + '\'' +
+                ", remotePath='" + remotePath + '\'' +
+                ", requesterId=" + requesterId +
+                ", remoteSelection=" + remoteSelection +
+                '}';
+    }
 }

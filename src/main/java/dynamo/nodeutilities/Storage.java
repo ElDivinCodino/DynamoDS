@@ -187,8 +187,13 @@ public class Storage {
         StringBuilder sb = new StringBuilder();
 
         sb.append("Storage: \n");
-        for (Item aDb : db) {
-            sb.append("\t- ").append(aDb).append("\n");
+
+        if (this.db.size() == 0) {
+            sb.append("\tEmpty.");
+        }else {
+            for (Item aDb : db) {
+                sb.append("\t- ").append(aDb).append("\n");
+            }
         }
         return sb.toString();
     }

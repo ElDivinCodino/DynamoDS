@@ -30,7 +30,7 @@ public class NodeActor extends UntypedActor{
     private Integer Q = 0;
 
     // The identifier of the dynamo.NodeActor.
-    private Integer idKey = 0;
+    private Integer idKey = null;
     private String remotePath = null;
 
     // Where all the peers are stored.
@@ -285,7 +285,10 @@ public class NodeActor extends UntypedActor{
                  */
                 if(((StartJoinMessage) message).getRemoteIp() == null) {
                     // first node in the system, generate the id
-                    this.idKey = ThreadLocalRandom.current().nextInt(1, 100);
+                    if (this.idKey == null) {
+                        // if the ID was not set manually by the client
+                        this.idKey = ThreadLocalRandom.current().nextInt(1, 100);
+                    }
                     ring.addPeer(new Peer(this.remotePath, context().actorSelection(self().path()),  this.idKey));
                     System.out.println("Node started and waiting for messages (id : " + this.idKey + ")");
                     storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".dynamo";
@@ -298,11 +301,18 @@ public class NodeActor extends UntypedActor{
                             ((StartJoinMessage) message).getRemotePort() + "/user/node";
 
                     requestPeersToRemote(remotePath);
-                    //once we have the list of peers we can generate this node's key checking
-                    // it does not collide with an existing one
-                    do {
-                        this.idKey = ThreadLocalRandom.current().nextInt(1, 100);
-                    } while(this.ring.keyExists(this.idKey));
+                    // once we have the list of peers if the client did not specify an ID
+                    // we can generate this node's key checking it does not collide with an existing one
+                    if (this.idKey == null) {
+                        // if the ID was not set automatically by the client
+                        do {
+                            this.idKey = ThreadLocalRandom.current().nextInt(1, 100);
+                        } while(this.ring.keyExists(this.idKey));
+                    }else {
+                        if (this.ring.keyExists(this.idKey)){
+                            throw new Exception("Key already exists in the system");
+                        }
+                    }
                     // add self to the ring
                     ring.addPeer(new Peer(this.remotePath, context().actorSelection(self().path()),  this.idKey));
                     // Print current state of ring
@@ -334,6 +344,7 @@ public class NodeActor extends UntypedActor{
                 if (this.ring.getNumberOfPeers() > this.N){
                     this.storage.removeItemsOutOfResponsibility(this.idKey, this.ring, this.N);
                 }
+                nodeActorLogger.info(this.storage.toString());
                 break;
             case "LeaveMessage":
                 // send message to everyone that we are leaving. Send also local storage alongside
@@ -391,6 +402,7 @@ public class NodeActor extends UntypedActor{
                         }
                     }
                 }
+                nodeActorLogger.info(this.storage.toString());
                 break;
             case "PeersListMessage":
                 PeersListMessage reply = new PeersListMessage(false, this.ring.getPeers());
