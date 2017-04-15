@@ -15,7 +15,18 @@ public class Ring {
      * @return true if the Peer was not already in the Collection, false otherwise
      */
     public boolean addPeer(Peer peer){
-        if (!peers.containsKey(peer.getKey())) {
+        return this.addPeer(peer, false);
+    }
+
+    /**
+     * Add a Peer to the Collection
+     * @param peer the Peer to be added to the Collection
+     * @param force true if we want to replace a possibily already existing Peer
+     *              (with the same key) with the new one
+     * @return true if the operation went good
+     */
+    public boolean addPeer(Peer peer, boolean force){
+        if (!peers.containsKey(peer.getKey()) || force) {
             peers.put(peer.getKey(), peer);
             return true;
         }

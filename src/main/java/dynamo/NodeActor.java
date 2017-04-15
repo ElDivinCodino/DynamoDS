@@ -588,21 +588,24 @@ public class NodeActor extends UntypedActor{
                             recMessage.getRemoteIp() + ":" +
                             recMessage.getRemotePort() + "/user/node";
 
-                    requestPeersToRemote(remotePath);
+                    this.requestPeersToRemote(remotePath);
+                    // add self to ring
+                    this.ring.addPeer(new Peer(this.remotePath, context().actorSelection(self().path()),  this.idKey), true);
 
                     String logMessage = "announce changing parameters: sent RecoveryMessage to remote Node with key " + this.idKey;
                     recMessage = new RecoveryMessage(this.remotePath, context().actorSelection(self().path()), recMessage.getRequesterId());
-                    broadcastToPeers(recMessage, logMessage);
+                    this.broadcastToPeers(recMessage, logMessage);
 
                     // also send to myself, in order to update the Ring I received
-                    getSelf().tell(recMessage, getSelf());
+//                    getSelf().tell(recMessage, getSelf());
+
 
                     // Print current state of ring
-                    nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
-                    storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".dynamo";
+                    this.nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
+                    this.storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".dynamo";
 
                     // initialize local storage
-                    storage = new Storage(this.storagePath);
+                    this.storage = new Storage(this.storagePath);
                     boolean load = storage.loadItems();
 
                     if(!load) {
@@ -611,11 +614,12 @@ public class NodeActor extends UntypedActor{
                         System.out.println("Items correctly loaded from local Storage");
                     }
 
-                    storage.removeItemsOutOfResponsibility(this.idKey, this.ring, this.N);
-                    // if I received a recovery request from the Node
-                } else {
-                    ring.getPeer(recMessage.getRequesterId()).setRemotePath(recMessage.getRemotePath());
-                    ring.getPeer(recMessage.getRequesterId()).setRemoteSelection(recMessage.getActorSelection());
+                    this.storage.removeItemsOutOfResponsibility(this.idKey, this.ring, this.N);
+                } else { // if I received a recovery request from the Node
+                    this.ring.getPeer(recMessage.getRequesterId()).setRemotePath(recMessage.getRemotePath());
+                    this.ring.getPeer(recMessage.getRequesterId()).setRemoteSelection(recMessage.getActorSelection());
+                    // log the state of the ring
+                    this.nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
                 }
                 break;
             default:
