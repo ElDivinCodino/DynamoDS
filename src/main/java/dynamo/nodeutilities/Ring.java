@@ -174,7 +174,7 @@ public class Ring {
         boolean amNext = false;
         Integer replicaCounter = 1;
         Integer currentPeer = this.next(startingKey);
-        while (!amNext && replicaCounter < N){
+        while (!amNext && replicaCounter <= N){
             if (currentPeer.equals(selfKey)){
                 amNext = true;
             }
