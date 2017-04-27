@@ -26,7 +26,8 @@ public class Storage {
     }
 
     /**
-     * updates an NodeUtilities.Item in the NodeUtilities.Storage, if already present, or adds it to the Storage if not. Items are stored in crescent order
+     * updates an NodeUtilities.Item in the NodeUtilities.Storage, if already present,
+     * or adds it to the Storage if not. Items are stored in crescent order
      *
      * @param key the key of the NodeUtilities.Item
      * @param value the updated value of the NodeUtilities.Item

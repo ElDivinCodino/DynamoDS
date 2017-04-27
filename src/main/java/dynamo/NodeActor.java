@@ -74,7 +74,7 @@ public class NodeActor extends UntypedActor{
         // Now have to initialize current NodeUtilities.Ring class to manage Peers.
         ring = new Ring();
 
-        this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.INFO);
+        this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.DEBUG);
     }
 
     /**
@@ -380,21 +380,12 @@ public class NodeActor extends UntypedActor{
                 if (this.ring.getNumberOfPeers() > (N - 1)  &&
                         this.ring.selfIsNextNClockwise(senderKey, this.N, this.idKey)){
                     for(Item item: senderStorage) {
-                        // TODO: look at this comment
                         /*
                         If a node is the Nth clockwise node from the leaving one, then it will
                         insert a new item in its storage, fine. In the case this node is 'nearer'
                         to the leaving one, then it will update its current item in case the leaving node
                         has one with a newer version number. This thing was not required in the assignment
                         but it comes easy with our code and indeed it seem a reasonable thing to do.
-                         */
-                        /*
-                        One more thing: currently we are broadcasting this ByeMatesMessage to ALL nodes in the
-                        system, attaching the local storage of the leaving node. The really correct way of doing it
-                        would be to send a simple ByeMates message to everyone, AND another one WITH the local storage
-                        JUST to the N clockwise nodes from the leaving one. For now I think it's ok to do it like this
-                        (since we have the first if(this.ring.selfIsNextNClockwise(...)), but we can consider
-                        doing it the correct way (so we should create another message, like ByeMatesItemsMessage).
                          */
                         if(this.ring.isNodeWithinRangeFromItem(item.getKey(), this.idKey, this.N)){
                             storage.update(item.getKey(), item.getValue(), item.getVersion());
@@ -452,7 +443,9 @@ public class NodeActor extends UntypedActor{
                 break;
             case "OperationMessage":
                 if (this.N > this.ring.getNumberOfPeers()){
-                    throw new Exception("N is greater than the number of active nodes.");
+                    this.nodeActorLogger.info("N is greater than the number of active nodes.");
+                    break;
+//                    throw new Exception("N is greater than the number of active nodes.");
                 }
                 OperationMessage opMessage = (OperationMessage) message;
                 if (opMessage.isClient()){
@@ -480,7 +473,7 @@ public class NodeActor extends UntypedActor{
                         if (opMessage.isRead()){
                             // A node is requiring a data item
                             Item item = storage.getItem(opMessage.getKey());
-                             // In case the is not item with this key, return the message with null
+                             // In case there is no item with this key, return the message with null
                             // version number. In this way the coordinator can issue an update
                             // to all replicas with version number 1 and the item will be created.
                             if (item == null) {
@@ -508,18 +501,10 @@ public class NodeActor extends UntypedActor{
                          the client
                         */
                         if (waitingQuorum){
-                            // in case the node did not have the requested item, it means that we have to insert it
-                            // HERE WE ARE ASSUMING THAT IF AT LEAST ONE NODE DOES NOT HAVE THE ITEM,
-                            // THEN ALSO ALL THE OTHER REPLICAS DON'T AS WELL
-                            if (((OperationMessage) message).getVersion() == null && !this.readOperation){
-
-                                Item newItem = new Item(((OperationMessage) message).getKey(),
-                                        null, 0); // the version will become 1 before sending to replicas
-                                // send to replicas the new element.
-                                this.issueUpdateToReplicas(newItem);
-                                resetVariables();
-                                this.scheduledTimeoutMessageCancellable.cancel();
-                            }else {
+                            OperationMessage response = (OperationMessage) message;
+                            if (response.getVersion() == null && readOperation){
+                                nodeActorLogger.debug("{} node does not have this item", getSender());
+                            } else {
                                 this.quorum++;
                                 this.readResponseMessages.add((OperationMessage) message);
                                 /*
@@ -532,8 +517,27 @@ public class NodeActor extends UntypedActor{
                                         // respond to the client with the proper item
                                         this.handleReadResponseToClient();
                                     } else{
-                                        // report success to client and send the correct update to the replicas
-                                        this.issueUpdateToReplicas(null);
+                                        // Q nodes have sent a response. Now we have to check if ALL of these responses
+                                        // are null (which means that no replica has this element yet > do an insert), otherwise
+                                        // we just send the update with the latest received item
+
+                                        // check for null responses
+                                        boolean isNull = true;
+                                        for (OperationMessage m : readResponseMessages){
+                                            if (m.getVersion() != null){
+                                                isNull = false;
+                                            }
+                                        }
+                                        // in case all the messages were null, we just sent the new item (insert operation)
+                                        // to all replicas
+                                        if (isNull){
+                                            Item newItem = new Item(response.getKey(),
+                                                    null, 0); // the version will become 1 before sending to replicas
+                                            // send to replicas the new element.
+                                            this.issueUpdateToReplicas(newItem);
+                                        } else { // otherwise we send the update with the latest version
+                                            this.issueUpdateToReplicas(null);
+                                        }
                                     }
                                     resetVariables();
                                     this.scheduledTimeoutMessageCancellable.cancel();

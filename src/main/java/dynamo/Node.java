@@ -79,9 +79,9 @@ public class Node {
             Integer w = myConfig.getInt("dynamo.replication.W");
             String path = myConfig.getString("dynamo.storage.location");
 
-            if (r + w < n){
+            if (r + w <= n){
                 // Illegal
-                throw new IllegalArgumentException("R + W is less than N.");
+                throw new IllegalArgumentException("R + W must be greater than N.");
             }
 
             // Can extend here the create call with arguments to the

@@ -146,12 +146,12 @@ public class Ring {
         // The nodes responsible for this item will be the N ones
         // with key >= itemKey
         Integer next = this.nextEqual(itemKey);
-        ArrayList<Peer> replicas = new ArrayList<Peer>();
+        ArrayList<Peer> replicas = new ArrayList<>();
 
         // In case there are less nodes than N, an item is stored in all
         // peers in the system.
         if (this.getNumberOfPeers() <= N) {
-            replicas = (ArrayList<Peer>)this.getPeers().values();
+            replicas = new ArrayList<>(this.getPeers().values());
         } else {
             for (int i = 0; i < N; i++) {
                 replicas.add(peers.get(next));
