@@ -74,7 +74,7 @@ public class NodeActor extends UntypedActor{
         // Now have to initialize current NodeUtilities.Ring class to manage Peers.
         ring = new Ring();
 
-        this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.DEBUG);
+        this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.INFO);
     }
 
     /**
@@ -271,7 +271,7 @@ public class NodeActor extends UntypedActor{
     }
 
     public void onReceive(Object message) throws Exception {
-        nodeActorLogger.info("Received Message {}", message.toString());
+        nodeActorLogger.debug("Received Message {}", message.toString());
 
         // class name is represented as dynamo.messages.className, so split and take last element.
         switch (message.getClass().getName().split("[.]")[2]) {
@@ -309,13 +309,15 @@ public class NodeActor extends UntypedActor{
                         } while(this.ring.keyExists(this.idKey));
                     }else {
                         if (this.ring.keyExists(this.idKey)){
-                            throw new Exception("Key already exists in the system");
+                            this.nodeActorLogger.error("Key already exists in the system");
+//                            throw new Exception("Key already exists in the system");
+                            break;
                         }
                     }
                     // add self to the ring
                     ring.addPeer(new Peer(this.remotePath, context().actorSelection(self().path()),  this.idKey));
                     // Print current state of ring
-                    nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
+                    nodeActorLogger.info(ring.toString());
                     storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".dynamo";
                     // initialize local storage
                     this.storage = new Storage(this.storagePath);
@@ -338,7 +340,7 @@ public class NodeActor extends UntypedActor{
                 ring.addPeer(peer);
                 nodeActorLogger.info("Added {} to local ring", peer.toString());
                 // Print current state of ring
-                nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
+                nodeActorLogger.info(ring.toString());
 
                 if (this.ring.getNumberOfPeers() > this.N){
                     this.storage.removeItemsOutOfResponsibility(this.idKey, this.ring, this.N);
@@ -366,7 +368,9 @@ public class NodeActor extends UntypedActor{
                 boolean removed = ring.removePeer(senderKey);
 
                 if (!removed){
-                    throw new Exception("Ring did not contain a Peer with key " + senderKey);
+                    this.nodeActorLogger.error("Ring did not contain a Peer with key " + senderKey);
+//                    throw new Exception("Ring did not contain a Peer with key " + senderKey);
+                    break;
                 }
 
                 nodeActorLogger.info(this.ring.toString());
@@ -443,7 +447,7 @@ public class NodeActor extends UntypedActor{
                 break;
             case "OperationMessage":
                 if (this.N > this.ring.getNumberOfPeers()){
-                    this.nodeActorLogger.info("N is greater than the number of active nodes.");
+                    this.nodeActorLogger.error("N is greater than the number of active nodes.");
                     break;
 //                    throw new Exception("N is greater than the number of active nodes.");
                 }
@@ -588,7 +592,7 @@ public class NodeActor extends UntypedActor{
                     this.broadcastToPeers(recMessage, logMessage);
 
                     // Print current state of ring
-                    this.nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
+                    this.nodeActorLogger.info(ring.toString());
                     this.storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".dynamo";
 
                     // initialize local storage
@@ -596,17 +600,20 @@ public class NodeActor extends UntypedActor{
                     boolean load = storage.loadItems();
 
                     if(!load) {
-                        throw new Exception("Cannot load the Items from the local Storage");
+                        this.nodeActorLogger.error("Cannot load the Items from the local Storage");
+//                        throw new Exception("Cannot load the Items from the local Storage");
+                        break;
                     } else {
                         System.out.println("Items correctly loaded from local Storage");
                     }
 
                     this.storage.removeItemsOutOfResponsibility(this.idKey, this.ring, this.N);
+                    this.nodeActorLogger.info(this.storage.toString());
                 } else { // if I received a recovery request from the Node
                     this.ring.getPeer(recMessage.getRequesterId()).setRemotePath(recMessage.getRemotePath());
                     this.ring.getPeer(recMessage.getRequesterId()).setRemoteSelection(recMessage.getActorSelection());
                     // log the state of the ring
-                    this.nodeActorLogger.info("Current state of ring: \n{}", ring.toString());
+                    this.nodeActorLogger.info(ring.toString());
                 }
                 break;
             default:
