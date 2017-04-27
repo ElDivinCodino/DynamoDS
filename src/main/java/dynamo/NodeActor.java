@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
 
-    DynamoLogger nodeActorLogger = new DynamoLogger();
+    private DynamoLogger nodeActorLogger = new DynamoLogger();
 
     // For know we hard code these values
     // Think about maybe reading them form the config at
@@ -204,7 +204,6 @@ public class NodeActor extends UntypedActor{
      * knowledge about this actor, so it is not possible to receive messages while we
      * are waiting.
      * @param remotePath The path of the remote actor
-     * @throws Exception
      */
     private void requestPeersToRemote(String remotePath) throws Exception {
         final Timeout timeout = new Timeout(Duration.create(5, "seconds"));
@@ -450,18 +449,6 @@ public class NodeActor extends UntypedActor{
                     // Now that we have initialized the storage, we can announce this new node to the system
                     announceSelfToSystem();
                 }
-
-//                if(msg.isRequest()) {
-//                    // receivedList contains all the Items in this node and not contained in the next one (so the Items I am the last responsible for)
-//                    ArrayList<Item> receivedList = storage.retrieveAll(msg.getItems());
-//                    // send Items collection to the new Peer
-//                    RequestInitItemsMessage response = new RequestInitItemsMessage(false, receivedList);
-//                    getSender().tell(response, getSelf());
-//                    //remove them from my Storage: I'm not anymore responsible for them!
-//                    storage.looseResponsibilityOf(receivedList);
-//                } else {
-//                    storage.acquireResponsibilityOf(msg.getItems());
-//                }
                 break;
             case "OperationMessage":
                 if (this.N > this.ring.getNumberOfPeers()){
@@ -595,10 +582,6 @@ public class NodeActor extends UntypedActor{
                     String logMessage = "announce changing parameters: sent RecoveryMessage to remote Node with key " + this.idKey;
                     recMessage = new RecoveryMessage(this.remotePath, context().actorSelection(self().path()), recMessage.getRequesterId());
                     this.broadcastToPeers(recMessage, logMessage);
-
-                    // also send to myself, in order to update the Ring I received
-//                    getSelf().tell(recMessage, getSelf());
-
 
                     // Print current state of ring
                     this.nodeActorLogger.info("Current state of ring: \n{}", ring.toString());

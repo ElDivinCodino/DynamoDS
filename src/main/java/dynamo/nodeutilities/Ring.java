@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Ring {
 
-    TreeMap<Integer, Peer> peers = new TreeMap<Integer, Peer>();
+    private TreeMap<Integer, Peer> peers = new TreeMap<Integer, Peer>();
 
     public Ring(){ }
 
@@ -223,10 +223,11 @@ public class Ring {
 
     @Override
     public String toString() {
-        String output = "Ring: \n";
+        StringBuilder sb = new StringBuilder();
+        sb.append("Ring: \n");
         for (Map.Entry<Integer, Peer> entry : this.getPeers().entrySet()) {
-            output +=  "\t- " + entry.getValue().toString() + "\n";
+            sb.append("\t- ").append(entry.getValue()).append("\n");
         }
-        return output;
+        return sb.toString();
     }
 }
