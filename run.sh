@@ -20,5 +20,5 @@ function concatenate_args
 
 args="$(concatenate_args "$@")"
 
-echo $args
+echo "Loading application..."
 ./gradlew -q --console plain $1 -Pmyargs="$args"

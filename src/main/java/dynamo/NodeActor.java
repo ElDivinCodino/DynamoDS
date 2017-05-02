@@ -339,7 +339,7 @@ public class NodeActor extends UntypedActor{
                         ((HelloMatesMessage) message).getRemoteSelection(),
                         ((HelloMatesMessage) message).getKey());
                 ring.addPeer(peer);
-                nodeActorLogger.info("Added {} to local ring", peer.toString());
+                nodeActorLogger.debug("Added {} to local ring", peer.toString());
                 // Print current state of ring
                 nodeActorLogger.info(ring.toString());
 
