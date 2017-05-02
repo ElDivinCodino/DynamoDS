@@ -7,6 +7,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import dynamo.messages.RecoveryMessage;
 import dynamo.messages.StartJoinMessage;
+import dynamo.nodeutilities.DynamoLogger;
 import dynamo.nodeutilities.Utilities;
 
 import java.net.InetAddress;
@@ -71,7 +72,7 @@ public class Node {
             Config custom = ConfigFactory.parseString("akka.remote.netty.tcp.hostname =" + localIP + ", akka.remote.netty.tcp.port = " + randomPort);
 
             ActorSystem system = ActorSystem.create("dynamo", custom.withFallback(myConfig));
-            System.out.println("ActorSystem started successfully, listening on ip: " + localIP + ", port " + randomPort);
+            System.out.println(DynamoLogger.ANSI_WHITE + "ActorSystem started successfully, listening on ip: " + localIP + ", port " + randomPort + DynamoLogger.ANSI_RESET);
 
             // Get replication parameters from config file.
             Integer n = myConfig.getInt("dynamo.replication.N");

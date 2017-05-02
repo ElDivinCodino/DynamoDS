@@ -289,7 +289,7 @@ public class NodeActor extends UntypedActor{
                         this.idKey = ThreadLocalRandom.current().nextInt(1, 100);
                     }
                     ring.addPeer(new Peer(this.remotePath, context().actorSelection(self().path()),  this.idKey));
-                    System.out.println("Node started and waiting for messages (id : " + this.idKey + ")");
+                    System.out.println("Node started and waiting for messages (" + DynamoLogger.ANSI_GREEN + "id : " + this.idKey + DynamoLogger.ANSI_RESET + ")");
                     storagePath = storagePath + "/dynamo_storage_node" + this.idKey + ".dynamo";
                     // initialize local storage
                     this.storage = new Storage(this.storagePath);
@@ -311,6 +311,7 @@ public class NodeActor extends UntypedActor{
                         if (this.ring.keyExists(this.idKey)){
                             this.nodeActorLogger.error("Key already exists in the system");
 //                            throw new Exception("Key already exists in the system");
+                            context().system().terminate();
                             break;
                         }
                     }
@@ -328,7 +329,7 @@ public class NodeActor extends UntypedActor{
                             getSelf()
                     );
                 }
-                nodeActorLogger.info("Initialized node unique key (key: {})", this.idKey);
+                // nodeActorLogger.info("Initialized node unique key (key: {})", this.idKey);
                 break;
             case "HelloMatesMessage":
                 // Here the nodes registers the info about the new peer and
