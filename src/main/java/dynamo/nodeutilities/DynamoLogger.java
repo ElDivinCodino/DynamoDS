@@ -4,15 +4,19 @@ package dynamo.nodeutilities;
  * Created by StefanoFiora on 22/03/2017.
  */
 public class DynamoLogger {
-    public static final String ANSI_RESET = "\u001B[0m";
-    public static final String ANSI_BLACK = "\u001B[30m";
-    public static final String ANSI_RED = "\u001B[31m";
-    public static final String ANSI_GREEN = "\u001B[32m";
-    public static final String ANSI_YELLOW = "\u001B[33m";
-    public static final String ANSI_BLUE = "\u001B[34m";
-    public static final String ANSI_PURPLE = "\u001B[35m";
-    public static final String ANSI_CYAN = "\u001B[36m";
-    public static final String ANSI_WHITE = "\u001B[37m";
+    public static final String ANSI_PREFIX = "\u001B[";
+
+    public static final String ANSI_RESET = ANSI_PREFIX + "0m";
+    public static final String ANSI_BLACK = ANSI_PREFIX + "30m";
+    public static final String ANSI_RED = ANSI_PREFIX + "31m";
+    public static final String ANSI_GREEN = ANSI_PREFIX + "32m";
+    public static final String ANSI_YELLOW = ANSI_PREFIX + "33m";
+    public static final String ANSI_BLUE = ANSI_PREFIX + "34m";
+    public static final String ANSI_PURPLE = ANSI_PREFIX + "35m";
+    public static final String ANSI_CYAN = ANSI_PREFIX + "36m";
+    public static final String ANSI_WHITE = ANSI_PREFIX + "37m";
+
+    public static final String ANSI_RED_BOLD = ANSI_PREFIX + "1;31m";
 
     public enum LOG_LEVEL { INFO, DEBUG };
     private LOG_LEVEL level;

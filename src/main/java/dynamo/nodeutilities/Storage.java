@@ -52,6 +52,7 @@ public class Storage {
             //else, add, shifting possibly all the others on the right, if any is present after
             db.add(i, item);
         }
+        // save the items to disk
         save();
     }
 

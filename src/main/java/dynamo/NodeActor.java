@@ -19,11 +19,11 @@ import java.util.concurrent.TimeUnit;
 
 public class NodeActor extends UntypedActor{
 
+    // custom logger to display useful stuff to console
     private DynamoLogger nodeActorLogger = new DynamoLogger();
 
-    // For know we hard code these values
-    // Think about maybe reading them form the config at
-    // actor initialization
+    // these parameters are read from the configuration file
+    // and initialized at class instantiation
     private Integer N = 0;
     private Integer R = 0;
     private Integer W = 0;

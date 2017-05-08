@@ -8,6 +8,7 @@ import com.typesafe.config.ConfigFactory;
 import dynamo.messages.LeaveMessage;
 import dynamo.messages.OperationMessage;
 import dynamo.messages.TimeoutMessage;
+import dynamo.nodeutilities.DynamoLogger;
 import dynamo.nodeutilities.Utilities;
 import scala.concurrent.Future;
 import scala.concurrent.Await;
@@ -124,7 +125,8 @@ public class Client {
                     System.out.println("Timeout has expired");
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                System.out.println(DynamoLogger.ANSI_RED + "[TIMEOUT] " + DynamoLogger.ANSI_RESET + "The request did not receive any response.");
+                // e.printStackTrace();
             }
         }
         System.exit(0);
