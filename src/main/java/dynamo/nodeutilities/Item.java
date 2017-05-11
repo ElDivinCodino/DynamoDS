@@ -3,7 +3,7 @@ package dynamo.nodeutilities;
 import java.io.Serializable;
 
 /**
- * Class which represents  basic item we want to store and manage
+ * Represents the basic item we want to store and manage
  */
 public class Item implements Comparable<Item>, Serializable{
 
@@ -36,13 +36,6 @@ public class Item implements Comparable<Item>, Serializable{
      */
     public int getVersion() {
         return version;
-    }
-
-    /**
-     * @param key must be an integer
-     */
-    public void setKey(int key) {
-        this.key = key;
     }
 
     /**

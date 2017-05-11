@@ -12,6 +12,9 @@ import dynamo.nodeutilities.Utilities;
 
 import java.net.InetAddress;
 
+/**
+ * Represents the interface for acting as node
+ */
 public class Node {
     public static void main(String[] args){
 

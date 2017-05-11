@@ -4,6 +4,9 @@ import akka.actor.ActorSelection;
 
 import java.io.Serializable;
 
+/**
+ * Message responsible manage the recovery of a crashed Node
+ */
 public class RecoveryMessage implements Serializable{
 
     private String remoteIp, remotePort, remotePath;

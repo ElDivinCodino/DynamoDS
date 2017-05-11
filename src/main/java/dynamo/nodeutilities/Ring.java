@@ -2,6 +2,10 @@ package dynamo.nodeutilities;
 
 import java.util.*;
 
+/**
+ * The representation of the current network, as a ring;
+ * it contains the Nodes and the logic operations that can be performed on the ring
+ */
 public class Ring {
 
     private TreeMap<Integer, Peer> peers = new TreeMap<Integer, Peer>();
@@ -67,7 +71,7 @@ public class Ring {
      * @param key the predecessor of the desired key
      * @return the least equal or greater key, or null if there is no such key
      */
-    public Integer nextEqual(Integer key){
+    private Integer nextEqual(Integer key){
 
         Integer lowest = peers.ceilingKey(key);
         // in case there is not a key, returns null
@@ -85,7 +89,7 @@ public class Ring {
      * @param key the predecessor of the desired key
      * @return the least greater key, or null if there is no such key
      */
-    public Integer next(Integer key){
+    private Integer next(Integer key){
         Integer next = peers.higherKey(key);
         if (next == null){
             next = peers.firstKey();

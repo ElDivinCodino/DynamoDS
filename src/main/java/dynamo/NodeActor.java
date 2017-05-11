@@ -17,6 +17,9 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * The actor which implements the functionality of a node in the Dynamo system
+ */
 public class NodeActor extends UntypedActor{
 
     // custom logger to display useful stuff to console
@@ -204,6 +207,7 @@ public class NodeActor extends UntypedActor{
      * knowledge about this actor, so it is not possible to receive messages while we
      * are waiting.
      * @param remotePath The path of the remote actor
+     * @throws Exception If a Timeout occurs
      */
     private void requestPeersToRemote(String remotePath) throws Exception {
         final Timeout timeout = new Timeout(Duration.create(5, "seconds"));

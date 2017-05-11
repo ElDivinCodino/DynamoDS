@@ -4,6 +4,9 @@ import akka.actor.ActorSelection;
 
 import java.io.Serializable;
 
+/**
+ * Message responsible for making all the Peers know about the new Peer that has joined the system
+ */
 public class HelloMatesMessage implements Serializable {
 
     private ActorSelection remoteSelection;

@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * Contains methods useful to setup the system and maintain its consistency
+ */
 public class Utilities {
 
     /**
@@ -12,7 +15,7 @@ public class Utilities {
      * @param port the port to be checked
      * @return true if the port is available, false otherwise
      */
-    public static boolean available(int port) {
+    private static boolean available(int port) {
 //        System.out.println("--------------Testing port " + port);
         Socket s = null;
         try {

@@ -6,7 +6,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 /**
- * Created by StefanoFiora on 15/03/2017.
+ * Message responsible to ask for and share all the already existing Items that the sender will be responsible for
  */
 public class RequestInitItemsMessage implements Serializable {
     private boolean request = false;

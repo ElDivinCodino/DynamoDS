@@ -18,7 +18,7 @@ import scala.concurrent.duration.Duration;
 import java.util.concurrent.TimeUnit;
 
 /**
- * This class represents the interface for the client
+ * Represents the interface for acting as client
  */
 public class Client {
 

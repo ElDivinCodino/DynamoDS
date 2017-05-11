@@ -5,6 +5,9 @@ import dynamo.nodeutilities.Peer;
 import java.io.Serializable;
 import java.util.TreeMap;
 
+/**
+ * Message responsible to ask for and sharing information regarding the already existing Peers in the system
+ */
 public class PeersListMessage implements Serializable {
 
     private boolean request = false;

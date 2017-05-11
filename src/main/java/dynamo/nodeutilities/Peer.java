@@ -4,7 +4,9 @@ import akka.actor.ActorSelection;
 
 import java.io.Serializable;
 
-
+/**
+ * Represents a single Peer for each Node in the system
+ */
 public class Peer implements Serializable {
 
     // the akka remote path that identifies an actor.
@@ -40,10 +42,6 @@ public class Peer implements Serializable {
 
     public Integer getKey() {
         return key;
-    }
-
-    public void setKey(Integer key) {
-        this.key = key;
     }
 
     @Override

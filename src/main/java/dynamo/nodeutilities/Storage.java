@@ -6,7 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * This class represents the storage where all Items for which a particular node is responsible are stored
+ * The storage where all Items for which a particular node is responsible are stored
  */
 public class Storage {
 
@@ -101,8 +101,8 @@ public class Storage {
     /**
      * Gets all the items excepts the ones with key that is inside
      * the given range, with 'to' excluded.
-     * @param from
-     * @param to
+     * @param from the first integer, in crescent order, the Item key must be less or equal than
+     * @param to the first integer, in crescent order, the Item key must be greater than
      * @return the list of the Items the requesting node is responsible for
      */
     public ArrayList<Item> getItemsForNewNode(Integer from, Integer to){
@@ -141,6 +141,9 @@ public class Storage {
     /**
      * load Items after a crash, when recovery is requested
      * @return true if the operation has been correctly executed, false otherwise
+     * @throws FileNotFoundException if no File is found in the predefined path
+     * @throws IOException if something goes wrong during the I/O operations
+     * @throws Exception if local Storage is corrupted
      */
     public boolean loadItems() throws Exception {
 

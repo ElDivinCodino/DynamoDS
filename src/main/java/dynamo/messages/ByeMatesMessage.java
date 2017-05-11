@@ -6,7 +6,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 /**
- * Created by StefanoFiora on 15/03/2017.
+ * Message to announce everyone that a leaving operation is started, and to share own Storage
  */
 public class ByeMatesMessage implements Serializable {
 

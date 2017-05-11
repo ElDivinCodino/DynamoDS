@@ -3,7 +3,7 @@ package dynamo.messages;
 import java.io.Serializable;
 
 /**
- * Created by StefanoFiora on 15/03/2017.
+ * Message that contains the IP address and the number of port of the coordinator that has to manage the joining request
  */
 public class StartJoinMessage implements Serializable {
 

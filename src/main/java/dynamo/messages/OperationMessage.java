@@ -3,7 +3,7 @@ package dynamo.messages;
 import java.io.Serializable;
 
 /**
- * Created by StefanoFiora on 15/03/2017.
+ * Message responsible for managing the writing and reading operations
  */
 public class OperationMessage implements Serializable {
 
