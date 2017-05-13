@@ -2,7 +2,7 @@
 
 **Distributed Systems 1 project course - Master Course in Computer Science @ UniTn  2016/17**
 
-##Authors:
+## Authors:
 
 **Stefano Fioravanzo** - stefano.fioravanzo@studenti.unitn.it
 
@@ -30,15 +30,15 @@ To implement replication, the system relies on quorums and versions that are ass
 
 The quorum values can be set in the `src/main/resources/application.conf` configuration file.
 
-####Storage
+#### Storage
 
 Local storage. Every node should maintains a persistent storage (text file) containing the key, the version and the value for every data item the node is responsible for. The location of the storage is determined by the `storage.location` parameter in the configuration file.
 
-####Network Communication
+#### Network Communication
 
 The Nodes can communicate in a distributed fashion, just start a new node using another node's remote IP as entry point. More on how to start the nodes below.
 
-####Recovery
+#### Recovery
 
 The system also simulates crash and recovery. If you want to manually crash a node, just press Ctrl+C. The use a client to specifically recover the crashed node, details on the specific arguments to use below.
 
