@@ -191,7 +191,7 @@ public class Storage {
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        sb.append("Storage: \n");
+        sb.append(DynamoLogger.ANSI_WHITE + "Storage: \n" + DynamoLogger.ANSI_RESET);
 
         if (this.db.size() == 0) {
             sb.append("\tEmpty.");

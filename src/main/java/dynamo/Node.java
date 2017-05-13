@@ -82,6 +82,7 @@ public class Node {
             Integer r = myConfig.getInt("dynamo.replication.R");
             Integer w = myConfig.getInt("dynamo.replication.W");
             String path = myConfig.getString("dynamo.storage.location");
+            String logLevel = myConfig.getString("dynamo.logger.level");
 
             if (r + w <= n){
                 // Illegal
@@ -90,7 +91,7 @@ public class Node {
 
             // Can extend here the create call with arguments to the
             // constructor of the dynamo.Node class
-            ActorRef localNode = system.actorOf(Props.create(NodeActor.class, localId, n, r, w, path), "node");
+            ActorRef localNode = system.actorOf(Props.create(NodeActor.class, localId, n, r, w, path, logLevel), "node");
 
             /*
             if is the starting Node, remoteIp and remotePort == null. When the node receives
@@ -117,6 +118,7 @@ public class Node {
             Integer r = myConfig.getInt("dynamo.replication.R");
             Integer w = myConfig.getInt("dynamo.replication.W");
             String path = myConfig.getString("dynamo.storage.location");
+            String logLevel = myConfig.getString("dynamo.logger.level");
 
             if (r + w < n){
                 // Illegal
@@ -125,7 +127,7 @@ public class Node {
 
             // Can extend here the create call with arguments to the
             // constructor of the dynamo.Node class
-            ActorRef localNode = system.actorOf(Props.create(NodeActor.class, localId, n, r, w, path), "node");
+            ActorRef localNode = system.actorOf(Props.create(NodeActor.class, localId, n, r, w, path, logLevel), "node");
 
             localNode.tell(new RecoveryMessage(remoteIp, remotePort, localId), null);
         } else {

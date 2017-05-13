@@ -228,7 +228,7 @@ public class Ring {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Ring: \n");
+        sb.append(DynamoLogger.ANSI_WHITE + "Ring: \n" + DynamoLogger.ANSI_RESET);
         for (Map.Entry<Integer, Peer> entry : this.getPeers().entrySet()) {
             sb.append("\t- ").append(entry.getValue()).append("\n");
         }

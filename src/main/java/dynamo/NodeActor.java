@@ -64,7 +64,7 @@ public class NodeActor extends UntypedActor{
     // A cancellable returned from the scheduler which lets us cancel the scheduled message
     private Cancellable scheduledTimeoutMessageCancellable;
 
-    public NodeActor(Integer id, Integer n, Integer r, Integer w, String storagePath) {
+    public NodeActor(Integer id, Integer n, Integer r, Integer w, String storagePath, String logLevel) {
         this.idKey = id;
         this.N = n;
         this.R = r;
@@ -77,7 +77,11 @@ public class NodeActor extends UntypedActor{
         // Now have to initialize current NodeUtilities.Ring class to manage Peers.
         ring = new Ring();
 
-        this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.INFO);
+        if (logLevel.equals("INFO")) {
+            this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.INFO);
+        } else if (logLevel.equals("DEBUG")) {
+            this.nodeActorLogger.setLevel(DynamoLogger.LOG_LEVEL.DEBUG);
+        }
     }
 
     /**
@@ -226,7 +230,7 @@ public class NodeActor extends UntypedActor{
 
         ring.addPeers(msg.getPeers());
 
-        nodeActorLogger.info("requestPeersToRemote: initialized Ring with {} peers",
+        nodeActorLogger.debug("requestPeersToRemote: initialized Ring with {} peers",
                 this.ring.getNumberOfPeers());
     }
 
