@@ -269,11 +269,13 @@ public class NodeActor extends UntypedActor{
      * Schedule a TimeoutMessage to self after
      * @param time How many time units to wait
      * @param unit Specific time unit to use
+     * @param init tells if this is a timeout regarding the initialization of the node
+     *             or messages exchange for an operation
      */
-    private void scheduleTimeout(Integer time, TimeUnit unit) {
+    private void scheduleTimeout(Integer time, TimeUnit unit, boolean init) {
         this.scheduledTimeoutMessageCancellable = getContext().system().scheduler().scheduleOnce(
                 Duration.create(time, unit),
-                getSelf(), new TimeoutMessage(), getContext().system().dispatcher(), getSelf());
+                getSelf(), new TimeoutMessage(init), getContext().system().dispatcher(), getSelf());
         nodeActorLogger.debug("scheduleTimeout: scheduled timeout in {} {}",
                 time, unit.toString());
     }
@@ -331,7 +333,9 @@ public class NodeActor extends UntypedActor{
                     // initialize local storage
                     this.storage = new Storage(this.storagePath);
                     // Here we request the items we are responsible for to the
-                    // next node in the ring
+                    // next node in the ring. We schedule a time, so if the next perr
+                    // does not respond we can terminate the process
+                    this.scheduleTimeout(2, TimeUnit.SECONDS, true);
                     this.ring.getNextPeer(this.idKey).getRemoteSelection().tell(
                             new RequestInitItemsMessage(true, this.idKey),
                             getSelf()
@@ -445,6 +449,8 @@ public class NodeActor extends UntypedActor{
                     // officially announces itself to the system.
 
                 } else { // isResponse (from the next clockwise node)
+                    // since the next node has answered, we delete the timeout.
+                    this.scheduledTimeoutMessageCancellable.cancel();
                     // Here we receive the data sent from the next node, this is all the data present in the system
                     // that we are responsible for.
                     this.storage.initializeStorage(((RequestInitItemsMessage) message).getItems());
@@ -479,7 +485,7 @@ public class NodeActor extends UntypedActor{
                         this.readOperation = false;
                         this.newValue = opMessage.getValue();
                     }
-                    this.scheduleTimeout(2, TimeUnit.SECONDS);
+                    this.scheduleTimeout(2, TimeUnit.SECONDS, false);
                     this.handleClientReadRequest(opMessage.getKey());
                 } else{ // isNode
                     if (opMessage.isRequest()){
@@ -513,7 +519,7 @@ public class NodeActor extends UntypedActor{
                          to have at least R replies before sending the response back to
                          the client
                         */
-                        if (waitingQuorum){
+                        if (this.waitingQuorum){
                             OperationMessage response = (OperationMessage) message;
                             if (response.getVersion() == null && readOperation){
                                 nodeActorLogger.debug("{} node does not have this item", getSender());
@@ -558,29 +564,40 @@ public class NodeActor extends UntypedActor{
                             }
                         }else {
                             // do nothing for now. Wait for other responses.
-                            nodeActorLogger.debug("Received an {} with waitingQuorum=false. Message Ignored.", opMessage.toString());
+                            this.nodeActorLogger.debug("Received an {} with waitingQuorum=false. Message Ignored.", opMessage.toString());
                         }
                     }
                 }
                 break;
             case "TimeoutMessage":
-                // if we are still waiting for some nodes to respond but too much time has passed
-                if (waitingQuorum) {
-                    // delete the upcoming scheduled Timeout
-                    this.scheduledTimeoutMessageCancellable = null;
-                    OperationMessage clientResponse = new OperationMessage(
-                            false,
-                            false,
-                            true,
-                            null,
-                            "failure",
-                            null);
-                    clientReferenceRequest.tell(clientResponse, getSelf());
-                    resetVariables();
-                }else {
-                    clientReferenceRequest.tell(new TimeoutMessage(), getSelf());
-                    resetVariables();
+                // if this timeout is produced by the next peer not responding
+                // during the join procedure
+                if (((TimeoutMessage)message).isInit()) {
+                    nodeActorLogger.error("The next peer in the ring is not responding. Terminating.");
+                    context().system().terminate();
+
+                } else{
+                    // if we are still waiting for some nodes to respond but too much time has passed
+                    if (this.waitingQuorum) {
+                        // delete the upcoming scheduled Timeout
+                        this.scheduledTimeoutMessageCancellable = null;
+                        OperationMessage clientResponse = new OperationMessage(
+                                false,
+                                false,
+                                true,
+                                null,
+                                "failure",
+                                null);
+                        this.clientReferenceRequest.tell(clientResponse, getSelf());
+                        resetVariables();
+                    }else {
+                        if (this.clientReferenceRequest != null) {
+                            this.clientReferenceRequest.tell(new TimeoutMessage(false), getSelf());
+                        }
+                        resetVariables();
+                    }
                 }
+
                 break;
             case "RecoveryMessage":
                 RecoveryMessage recMessage = ((RecoveryMessage)message);
