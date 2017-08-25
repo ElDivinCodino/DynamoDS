@@ -1,4 +1,4 @@
-package AEP.nodeUtilities;
+package dynamo.nodeutilities;
 
 import java.io.IOException;
 import java.net.Socket;

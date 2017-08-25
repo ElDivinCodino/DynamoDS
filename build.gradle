@@ -16,11 +16,6 @@ dependencies {
 }
 
 
-/* INHERITANCE FROM DYNAMO PROJECT */
-
-
-
-
 /**
  * Custom Gradle task to run the Client CLI.
  * You can run the application in this way: ./gradlew node -Pmyargs="arg1 arg2 ..."

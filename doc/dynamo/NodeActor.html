@@ -170,7 +170,7 @@ extends akka.actor.UntypedActor</pre>
 <td class="colLast"><code><span class="memberNameLink"><a href="../dynamo/NodeActor.html#newValue">newValue</a></span></code>&nbsp;</td>
 </tr>
 <tr class="altColor">
-<td class="colFirst"><code>private <a href="../dynamo/nodeutilities/DynamoLogger.html" title="class in AEP.nodeutilities">DynamoLogger</a></code></td>
+<td class="colFirst"><code>private <a href="../dynamo/nodeutilities/DynamoLogger.html" title="class in dynamo.nodeutilities">DynamoLogger</a></code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../dynamo/NodeActor.html#nodeActorLogger">nodeActorLogger</a></span></code>&nbsp;</td>
 </tr>
 <tr class="rowColor">
@@ -202,7 +202,7 @@ extends akka.actor.UntypedActor</pre>
 <td class="colLast"><code><span class="memberNameLink"><a href="../dynamo/NodeActor.html#remotePath">remotePath</a></span></code>&nbsp;</td>
 </tr>
 <tr class="altColor">
-<td class="colFirst"><code>private <a href="../dynamo/nodeutilities/Ring.html" title="class in AEP.nodeutilities">Ring</a></code></td>
+<td class="colFirst"><code>private <a href="../dynamo/nodeutilities/Ring.html" title="class in dynamo.nodeutilities">Ring</a></code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../dynamo/NodeActor.html#ring">ring</a></span></code>&nbsp;</td>
 </tr>
 <tr class="rowColor">
@@ -210,7 +210,7 @@ extends akka.actor.UntypedActor</pre>
 <td class="colLast"><code><span class="memberNameLink"><a href="../dynamo/NodeActor.html#scheduledTimeoutMessageCancellable">scheduledTimeoutMessageCancellable</a></span></code>&nbsp;</td>
 </tr>
 <tr class="altColor">
-<td class="colFirst"><code>private <a href="../dynamo/nodeutilities/Storage.html" title="class in AEP.nodeutilities">Storage</a></code></td>
+<td class="colFirst"><code>private <a href="../dynamo/nodeutilities/Storage.html" title="class in dynamo.nodeutilities">Storage</a></code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../dynamo/NodeActor.html#storage">storage</a></span></code>&nbsp;</td>
 </tr>
 <tr class="rowColor">
@@ -276,7 +276,7 @@ extends akka.actor.UntypedActor</pre>
 </td>
 </tr>
 <tr id="i2" class="altColor">
-<td class="colFirst"><code>private <a href="../dynamo/nodeutilities/Item.html" title="class in AEP.nodeutilities">Item</a></code></td>
+<td class="colFirst"><code>private <a href="../dynamo/nodeutilities/Item.html" title="class in dynamo.nodeutilities">Item</a></code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../dynamo/NodeActor.html#getLatestVersionItemFromResponses--">getLatestVersionItemFromResponses</a></span>()</code>
 <div class="block">Returns the item with newer version number from the responses from the replicas</div>
 </td>
@@ -295,7 +295,7 @@ extends akka.actor.UntypedActor</pre>
 </tr>
 <tr id="i5" class="rowColor">
 <td class="colFirst"><code>private void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../dynamo/NodeActor.html#issueUpdateToReplicas-Item-">issueUpdateToReplicas</a></span>(<a href="../dynamo/nodeutilities/Item.html" title="class in AEP.nodeutilities">Item</a>&nbsp;item)</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../dynamo/NodeActor.html#issueUpdateToReplicas-dynamo.nodeutilities.Item-">issueUpdateToReplicas</a></span>(<a href="../dynamo/nodeutilities/Item.html" title="class in dynamo.nodeutilities">Item</a>&nbsp;item)</code>
 <div class="block">Sends success message to client and then tell the replicas to update their data item with the new value and latest version number.</div>
 </td>
 </tr>
@@ -371,7 +371,7 @@ extends akka.actor.UntypedActor</pre>
 <ul class="blockList">
 <li class="blockList">
 <h4>nodeActorLogger</h4>
-<pre>private&nbsp;<a href="../dynamo/nodeutilities/DynamoLogger.html" title="class in AEP.nodeutilities">DynamoLogger</a> nodeActorLogger</pre>
+<pre>private&nbsp;<a href="../dynamo/nodeutilities/DynamoLogger.html" title="class in dynamo.nodeutilities">DynamoLogger</a> nodeActorLogger</pre>
 </li>
 </ul>
 <a name="N">
@@ -434,7 +434,7 @@ extends akka.actor.UntypedActor</pre>
 <ul class="blockList">
 <li class="blockList">
 <h4>ring</h4>
-<pre>private&nbsp;<a href="../dynamo/nodeutilities/Ring.html" title="class in AEP.nodeutilities">Ring</a> ring</pre>
+<pre>private&nbsp;<a href="../dynamo/nodeutilities/Ring.html" title="class in dynamo.nodeutilities">Ring</a> ring</pre>
 </li>
 </ul>
 <a name="storage">
@@ -443,7 +443,7 @@ extends akka.actor.UntypedActor</pre>
 <ul class="blockList">
 <li class="blockList">
 <h4>storage</h4>
-<pre>private&nbsp;<a href="../dynamo/nodeutilities/Storage.html" title="class in AEP.nodeutilities">Storage</a> storage</pre>
+<pre>private&nbsp;<a href="../dynamo/nodeutilities/Storage.html" title="class in dynamo.nodeutilities">Storage</a> storage</pre>
 </li>
 </ul>
 <a name="storagePath">
@@ -610,7 +610,7 @@ extends akka.actor.UntypedActor</pre>
 <ul class="blockList">
 <li class="blockList">
 <h4>getLatestVersionItemFromResponses</h4>
-<pre>private&nbsp;<a href="../dynamo/nodeutilities/Item.html" title="class in AEP.nodeutilities">Item</a>&nbsp;getLatestVersionItemFromResponses()</pre>
+<pre>private&nbsp;<a href="../dynamo/nodeutilities/Item.html" title="class in dynamo.nodeutilities">Item</a>&nbsp;getLatestVersionItemFromResponses()</pre>
 <div class="block">Returns the item with newer version number from the responses from the replicas</div>
 <dl>
 <dt><span class="returnLabel">Returns:</span></dt>
@@ -628,13 +628,13 @@ extends akka.actor.UntypedActor</pre>
 <div class="block">Decides what Item to send back to the client between the ones received by the replicas in the system, and then sends it.</div>
 </li>
 </ul>
-<a name="issueUpdateToReplicas-Item-">
+<a name="issueUpdateToReplicas-dynamo.nodeutilities.Item-">
 <!--   -->
 </a>
 <ul class="blockList">
 <li class="blockList">
 <h4>issueUpdateToReplicas</h4>
-<pre>private&nbsp;void&nbsp;issueUpdateToReplicas(<a href="../dynamo/nodeutilities/Item.html" title="class in AEP.nodeutilities">Item</a>&nbsp;item)</pre>
+<pre>private&nbsp;void&nbsp;issueUpdateToReplicas(<a href="../dynamo/nodeutilities/Item.html" title="class in dynamo.nodeutilities">Item</a>&nbsp;item)</pre>
 <div class="block">Sends success message to client and then tell the replicas to update their data item with the new value and latest version number.</div>
 <dl>
 <dt><span class="paramLabel">Parameters:</span></dt>
